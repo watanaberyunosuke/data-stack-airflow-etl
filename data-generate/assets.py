@@ -40,7 +40,7 @@ ORDER_METHOD = [
     {"order_method_id": 4, "order_method_name": "Web"},
 ]
 
-# Initialize products list
+# Initialise products list
 PRODUCTS = []
 
 # Generate random first and last names

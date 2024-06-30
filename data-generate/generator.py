@@ -28,9 +28,9 @@ load_dotenv()
 CONNECTION = psycopg2.connect(
     user=os.environ["POSTGRES_USER"],
     password=os.environ["POSTGRES_PASSWORD"],
-    host="localhost",
+    host=os.environ["POSTGRES_HOST"],
     port="5432",
-    database="sales_oltp",
+    database=os.environ["POSTGRES_OLTP_DATABASE"],
 )
 
 """
@@ -82,9 +82,9 @@ def publish_oltp_transactions(n=100000):
         conn = psycopg2.connect(
             user=os.environ["POSTGRES_USER"],
             password=os.environ["POSTGRES_PASSWORD"],
-            host="localhost",
+            host=os.environ["POSTGRES_HOST"],
             port="5432",
-            database="sales_oltp",
+            database=os.environ["POSTGRES_OLTP_DATABASE"],
         )
         conn.autocommit = True
 
@@ -242,7 +242,7 @@ def generate_csv_data(n):
         last_name = choice(LAST_NAMES)
 
         transaction = {
-            'product_name': product['name'],
+            'product_name': product['product_name'],
             'quantity': quantity,
             'total_amount': quantity * product['price'],
             'order_method': order_method,
@@ -326,7 +326,7 @@ def generate_xml_data(reseller_id, n=5):
         transaction = {
             'date': transaction_date_formatted,
             'reseller-id': reseller_id,
-            'productName': product['name'],
+            'productName': product['product_name'],
             'quantity': quantity,
             'totalAmount': quantity * product['price'] * 1.0,
             'salesChannel': choice(generate_purchase_method('reseller')),
