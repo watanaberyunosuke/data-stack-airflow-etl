@@ -1,0 +1,17 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "database": "sales_oltp",
+            "username": "postgres",
+            "name": "Local-Postgres"
+        }
+    ],
+    "files.watcherExclude": {
+        "**/target": true
+    },
+    "python.analysis.typeCheckingMode": "basic"
+}
