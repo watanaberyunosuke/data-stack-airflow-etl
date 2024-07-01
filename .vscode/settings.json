@@ -13,5 +13,13 @@
     "files.watcherExclude": {
         "**/target": true
     },
-    "python.analysis.typeCheckingMode": "basic"
+    "python.analysis.typeCheckingMode": "basic",
+    "dbt.dbtIntegration": "core",
+    "dbt.deferConfigPerProject": {
+        "dbt/dbt_trans": {
+            "deferToProduction": true
+        }
+    },
+    "dbt.enableNewLineagePanel": true,
+    "python.analysis.autoImportCompletions": true
 }

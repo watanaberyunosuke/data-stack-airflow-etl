@@ -77,7 +77,6 @@ product_data = list(itertools.product(PRODUCT_NAMES, CITIES_RANGE))
 PRODUCT_ID = 1
 
 for product_name, city in product_data:
-    print(f"Processing product: {product_name} in city: {city}")  # Debug statement
     product = {
         "product_name": product_name,
         "city": city,

@@ -260,11 +260,10 @@ def generate_csv_data(n):
 def create_csv_file(n):
     print('Creating CSV files...')
     for reseller_id in CSV_RESELLERS:
-        print(f'Generating data for reseller ID: {reseller_id}')
 
         export = generate_csv_data(n)
         if not export:
-            print(f'No data generated for reseller ID: {reseller_id}')
+            # print(f'No data generated for reseller ID: {reseller_id}')
             continue
 
         # Include transaction_id in the keys
@@ -273,10 +272,6 @@ def create_csv_file(n):
 
         for day in ALL_DAYS:
             data = [tran for tran in export if tran.get('transaction_date') == day]
-
-            if not data:
-                print(f'No data for day: {day}')
-                continue
 
             for entry in data:
                 entry['transaction_id'] = transaction_id
@@ -288,16 +283,17 @@ def create_csv_file(n):
             directory = 'data-generate/file_landing'
             if not os.path.exists(directory):
                 os.makedirs(directory)
+                print(f'Directory created at {directory}')
 
             file_path = f'{directory}/DailySales_{new_format}_{reseller_id}.csv'
-            print(f'Writing data to {file_path}')
+            # print(f'Writing data to {file_path}')
 
             with open(file_path, 'w', newline='') as output_file:
                 dict_writer = csv.DictWriter(output_file, keys)
                 dict_writer.writeheader()
                 dict_writer.writerows(data)
 
-            print(f'CSV file created successfully for day {day} and reseller ID {reseller_id}')
+            # print(f'CSV file created successfully for day {day} and reseller ID {reseller_id}')
 
 
 """
