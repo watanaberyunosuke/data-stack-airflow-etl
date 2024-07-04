@@ -46,7 +46,7 @@ column_types = {col: map_spark_dtype(dtype) for col, dtype in schema}
 columns = ", ".join([f"{col} {dtype}" for col, dtype in column_types.items()])
 
 # Create table SQL statement
-create_table_sql = f"CREATE TABLE public.australian_postcodes ({columns});"
+create_table_sql = f"CREATE TABLE public.australian_postcodes_overall ({columns});"
 
 # Connect to PostgreSQL
 conn = CONNECTION
@@ -54,7 +54,7 @@ conn.autocommit = True
 cur = conn.cursor()
 
 # Execute the SQL to create the table
-cur.execute("DROP TABLE IF EXISTS public.australian_postcodes")
+cur.execute("DROP TABLE IF EXISTS public.australian_postcodes_overall")
 cur.execute(create_table_sql)
 
 # Write the DataFrame to a temporary directory as CSV
@@ -68,7 +68,7 @@ if len(csv_files) == 0:
 
 # Load the CSV into PostgreSQL
 copy_sql = """
-           COPY public.australian_postcodes FROM stdin WITH CSV HEADER
+           COPY public.australian_postcodes_overall FROM stdin WITH CSV HEADER
            DELIMITER as ','
            """
 for csv_file in csv_files:
