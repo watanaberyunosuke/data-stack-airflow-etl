@@ -45,7 +45,7 @@ schema = df.dtypes
 column_types = {col: map_spark_dtype(dtype) for col, dtype in schema}
 columns = ", ".join([f"{col} {dtype}" for col, dtype in column_types.items()])
 
-# Create table SQL statement
+# Create table SQL statement for overall table
 create_table_sql = f"CREATE TABLE public.australian_postcodes_overall ({columns});"
 
 # Connect to PostgreSQL
@@ -53,7 +53,7 @@ conn = CONNECTION
 conn.autocommit = True
 cur = conn.cursor()
 
-# Execute the SQL to create the table
+# Execute the SQL to create the overall table
 cur.execute("DROP TABLE IF EXISTS public.australian_postcodes_overall")
 cur.execute(create_table_sql)
 
@@ -74,6 +74,18 @@ copy_sql = """
 for csv_file in csv_files:
     with open(csv_file, "r") as f:
         cur.copy_expert(sql=copy_sql, file=f)
+
+# Create the new table with selected columns
+create_new_table_sql = """
+    CREATE TABLE public.australian_postcodes AS
+    SELECT DISTINCT postcode, sa1_name_2021 as suburb, state, status
+    FROM public.australian_postcodes_overall
+    WHERE sa1_name_2021 IS NOT NULL AND type IS NOT NULL
+    ORDER BY postcode;
+"""
+
+cur.execute("DROP TABLE IF EXISTS public.australian_postcodes")
+cur.execute(create_new_table_sql)
 
 # Close connections
 cur.close()
