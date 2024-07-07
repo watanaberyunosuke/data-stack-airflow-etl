@@ -3,8 +3,11 @@
 """
 
 import csv
+from datetime import datetime
 import os
 from random import choice, randrange
+import time
+from faker import Faker
 import psycopg2
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
@@ -31,11 +34,33 @@ CONNECTION = psycopg2.connect(
     host=os.environ["POSTGRES_HOST"],
     port="5432",
     database=os.environ["POSTGRES_OLTP_DATABASE"],
+    options="-c search_path=extracts",
 )
+
+fake = Faker()
 
 """
     Generate and publish OLTP data
 """
+
+
+def set_up_oltp_schema():
+
+    print("Setting Up OLTP Schema...")
+
+    with CONNECTION as conn:
+        with conn.cursor() as cursor:
+            # Drop Schema
+            cursor.execute("DROP SCHEMA IF EXISTS extracts CASCADE")
+            cursor.execute("DROP SCHEMA IF EXISTS source CASCADE")
+            cursor.execute("DROP SCHEMA IF EXISTS raw CASCADE")
+            cursor.execute("DROP SCHEMA IF EXISTS staging CASCADE")
+
+            # Create Schema
+            cursor.execute("CREATE SCHEMA extracts")
+            cursor.execute("CREATE SCHEMA source")
+            cursor.execute("CREATE SCHEMA raw")
+            cursor.execute("CREATE SCHEMA staging")
 
 
 def generate_oltp_data(n=100000):
@@ -85,13 +110,14 @@ def publish_oltp_transactions(n=100000):
             host=os.environ["POSTGRES_HOST"],
             port="5432",
             database=os.environ["POSTGRES_OLTP_DATABASE"],
+            options="-c search_path=extracts",
         )
         conn.autocommit = True
 
         cur = conn.cursor()
         cur.execute("DROP TABLE IF EXISTS transactions")
         cur.execute(
-            "CREATE TABLE transactions(transaction_id serial primary key, customer_id int, product_id int, amount numeric(12, 2), quantity int, order_method_id int, transaction_date date)"
+            "CREATE TABLE transactions(transaction_id serial primary key, customer_id int, product_id int, amount numeric(12, 2), quantity int, order_method_id int, transaction_date date, load_timestamp timestamp)"
         )
 
         query = "INSERT INTO transactions({}) VALUES %s".format(','.join(columns))
@@ -122,7 +148,9 @@ def publish_oltp_order_methods():
         cur = conn.cursor()
 
         cur.execute("DROP TABLE IF EXISTS order_method")
-        cur.execute("CREATE TABLE order_method(order_method_id int, order_method_name varchar(255))")
+        cur.execute(
+            "CREATE TABLE order_method(order_method_id int, order_method_name varchar(255))"
+        )
 
         query = "INSERT INTO order_method({}) VALUES %s".format(','.join(columns))
 
@@ -141,7 +169,15 @@ def publish_oltp_customers():
     for i in range(1, 1000):
         first_name = choice(FIRST_NAMES)
         last_name = choice(LAST_NAMES)
-        customers_list.append({'customer_id': i, 'first_name': first_name, 'last_name': last_name})
+        email = fake.email()
+        customers_list.append(
+            {
+                'customer_id': i,
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email
+            }
+        )
 
     columns = customers_list[0].keys()
 
@@ -149,7 +185,9 @@ def publish_oltp_customers():
         cur = conn.cursor()
 
         cur.execute("DROP TABLE IF EXISTS customers")
-        cur.execute("CREATE TABLE customers(customer_id int, first_name varchar(255), last_name varchar(255))")
+        cur.execute(
+            "CREATE TABLE customers(customer_id int, first_name varchar(255), last_name varchar(255), email varchar(255))"
+        )
 
         query = "INSERT INTO customers({}) VALUES %s".format(','.join(columns))
 
@@ -169,7 +207,9 @@ def publish_oltp_resellers():
         cur = conn.cursor()
 
         cur.execute("DROP TABLE IF EXISTS resellers")
-        cur.execute("CREATE TABLE resellers(reseller_id int, reseller_name varchar(255), commission_pct decimal)")
+        cur.execute(
+            "CREATE TABLE resellers(reseller_id int, reseller_name varchar(255), commission_pct decimal)"
+        )
 
         query = "INSERT INTO resellers({}) VALUES %s".format(','.join(columns))
 
@@ -196,11 +236,7 @@ def publish_oltp_products():
 
             cur.execute("DROP TABLE IF EXISTS products")
             cur.execute(
-                "CREATE TABLE products("
-                "product_id int primary key, "
-                "product_name varchar(255), "
-                "city varchar(255), "
-                "price numeric(12,2))"
+                "CREATE TABLE products(product_id int primary key, product_name varchar(255), city varchar(255), price numeric(12,2))"
             )
 
             query = "INSERT INTO products({}) VALUES %s".format(','.join(columns))
@@ -240,6 +276,7 @@ def generate_csv_data(n):
         city = choice(CITIES_RANGE)
         first_name = choice(FIRST_NAMES)
         last_name = choice(LAST_NAMES)
+        load_timestamp = time.time()
 
         transaction = {
             'product_name': product['product_name'],
@@ -250,6 +287,7 @@ def generate_csv_data(n):
             'customer_last_name': last_name,
             'city': city,
             'transaction_date': transaction_date,
+            'load_timestamp': load_timestamp,
         }
 
         export.append(transaction)
@@ -333,6 +371,7 @@ def generate_xml_data(reseller_id, n=5):
             },
             'createDate': transaction_date_formatted,
             'city': product['city'],
+            'loadTimestamp': time.time(),
         }
 
         export.append(transaction)
@@ -355,6 +394,7 @@ def create_xml_file():
             xml.dictionary('customer', [xml.string('firstname'), xml.string('lastname'), xml.string('email')]),
             xml.string('createDate'),
             xml.string('city'),
+            xml.string('loadTimestamp'),
         ],
     )
 

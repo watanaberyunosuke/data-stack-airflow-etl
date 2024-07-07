@@ -5,6 +5,7 @@ This is WIP
 ## Progress
 
 - [x] Seeding module
+- [ ] Spatial Information module: Base Spatial Information DWH
 - [ ] Transform module: DBT
 - [ ] Orchestration: Airflow
 - [ ] Container: Docker Compose

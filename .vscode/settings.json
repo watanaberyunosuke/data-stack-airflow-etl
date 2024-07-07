@@ -21,5 +21,8 @@
         }
     },
     "dbt.enableNewLineagePanel": true,
-    "python.analysis.autoImportCompletions": true
+    "python.analysis.autoImportCompletions": true,
+    "sqlfluff.dbtInterface.enabled": false,
+    "sqlfluff.executablePath": "/opt/homebrew/Caskroom/miniconda/base/envs/airflow-etl/bin/sqlfluff",
+    "sqlfluff.dialect": "postgres"
 }

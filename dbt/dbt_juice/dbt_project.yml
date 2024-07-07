@@ -1,0 +1,66 @@
+name: "dbt_juice_dev_source"
+version: "1.0.0"
+
+profile: "dbt_juice_dev_source"
+
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  dbt_juice:
+    +materialized: view
+
+seeds:
+  dbt_juice:
+    +enabled: true
+    +schema: raw
+    australian_postcodes_overall:
+      +column_types:
+        id: varchar
+        postcode: varchar
+        locality: varchar
+        state: varchar
+        long: varchar
+        lat: varchar
+        dc: varchar
+        type: varchar
+        status: varchar
+        sa3: varchar
+        sa3name: varchar 
+        sa4: varchar
+        sa4name: varchar
+        region: varchar
+        Lat_precise: varchar
+        Long_precise: varchar
+        SA1_CODE_2021: varchar
+        SA1_NAME_2021: varchar
+        SA2_CODE_2021: varchar
+        SA2_NAME_2021: varchar
+        SA3_CODE_2021: varchar
+        SA3_NAME_2021: varchar
+        SA4_CODE_2021: varchar
+        SA4_NAME_2021: varchar
+        RA_2011: varchar
+        RA_2016: varchar
+        RA_2021: varchar
+        RA_2021_NAME: varchar
+        MMM_2015: varchar
+        MMM_2019: varchar
+        ced: varchar
+        altitude: varchar
+        chargezone: varchar
+        phn_code: varchar
+        phn_name: varchar
+        lgaregion: varchar
+        lgacode: varchar
+        electorate: varchar
+        electoraterating: varchar
+        sed_code: varchar
+        sed_name: varchar 
