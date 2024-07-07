@@ -13,5 +13,16 @@
     "files.watcherExclude": {
         "**/target": true
     },
-    "python.analysis.typeCheckingMode": "basic"
+    "python.analysis.typeCheckingMode": "basic",
+    "dbt.dbtIntegration": "core",
+    "dbt.deferConfigPerProject": {
+        "dbt/dbt_trans": {
+            "deferToProduction": true
+        }
+    },
+    "dbt.enableNewLineagePanel": true,
+    "python.analysis.autoImportCompletions": true,
+    "sqlfluff.dbtInterface.enabled": false,
+    "sqlfluff.executablePath": "/opt/homebrew/Caskroom/miniconda/base/envs/airflow-etl/bin/sqlfluff",
+    "sqlfluff.dialect": "postgres"
 }

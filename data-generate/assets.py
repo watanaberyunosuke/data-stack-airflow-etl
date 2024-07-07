@@ -1,7 +1,12 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import itertools
-import names
 from random import randint, randrange
+import time
+
+from faker import Faker
+
+# Faker
+fake = Faker()
 
 # Define date ranges for random date generation
 start_date_limit = date(2024, 6, 1)
@@ -44,14 +49,18 @@ ORDER_METHOD = [
 PRODUCTS = []
 
 # Generate random first and last names
-FIRST_NAMES = [names.get_first_name() for _ in range(1000)]
-LAST_NAMES = [names.get_last_name() for _ in range(1000)]
+FIRST_NAMES = [fake.first_name() for _ in range(1000)]
+LAST_NAMES = [fake.last_name() for _ in range(1000)]
 
 # Define reseller transactions
 RESELLERS_TRANSACTIONS = [
     {"reseller_id": 1001, "reseller_name": "Get Hydrated", "commission_pct": 0.1},
     {"reseller_id": 1002, "reseller_name": "What the Fruit", "commission_pct": 0.17},
-    {"reseller_id": 1003, "reseller_name": "Pure Pulp Resellers", "commission_pct": 0.14},
+    {
+        "reseller_id": 1003,
+        "reseller_name": "Pure Pulp Resellers",
+        "commission_pct": 0.14,
+    },
     {"reseller_id": 1004, "reseller_name": "Citrus Circuit", "commission_pct": 0.16},
 ]
 
@@ -77,7 +86,6 @@ product_data = list(itertools.product(PRODUCT_NAMES, CITIES_RANGE))
 PRODUCT_ID = 1
 
 for product_name, city in product_data:
-    print(f"Processing product: {product_name} in city: {city}")  # Debug statement
     product = {
         "product_name": product_name,
         "city": city,
