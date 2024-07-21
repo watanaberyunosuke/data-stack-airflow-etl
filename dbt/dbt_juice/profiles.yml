@@ -1,4 +1,4 @@
-dbt_juice_dev_source:
+dbt_juice_dev:
   target: dev
   outputs:
     dev:
@@ -8,5 +8,5 @@ dbt_juice_dev_source:
       password: postgres
       port: 5432
       dbname: sales_oltp
-      schema: source
+      schema: extracts
       threads: 4

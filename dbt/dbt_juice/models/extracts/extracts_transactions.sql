@@ -6,9 +6,10 @@ SELECT
     customer_id,
     product_id,
     amount,
-    qty,
-    channel_id,
-    bought_date,
+    quantity,
+    order_method_id,
+    transaction_date,
     transaction_id,
     now() AS loaded_timestamp
 FROM raw_transactions
+ORDER BY transaction_date

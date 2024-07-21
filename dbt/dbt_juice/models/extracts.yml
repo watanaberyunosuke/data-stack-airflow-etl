@@ -1,7 +1,7 @@
 version: 2
 sources:
 - name: extracts
-  schema: source
+  schema: extracts
   tables:
   - name: customers
     identifier: customers
@@ -9,8 +9,8 @@ sources:
     identifier: products
   - name: resellers
     identifier: resellers
-  - name: resellercsv
-    identifier: resellercsv
+  - name: resellerscsv
+    identifier: resellerscsv
   - name: transactions
     identifier: transactions
   - name: order_methods
@@ -18,5 +18,5 @@ sources:
 - name: preprocessed
   schema: staging
   tables:
-  - name: resellerxmlextracted
-    identifier: resellerxmlextracted
+  - name: resellersxmlextracted
+    identifier: resellersxmlextracted

@@ -4,6 +4,5 @@ WITH raw_resellers AS (
 
 SELECT
     reseller_id,
-    reseller_name,
-    loaded_timestamp
+    reseller_name
 FROM raw_resellers

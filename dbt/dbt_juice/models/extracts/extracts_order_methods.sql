@@ -4,7 +4,6 @@ WITH raw_order_methods AS (
 
 SELECT
     order_method_id,
-    order_method_name,
-    loaded_timestamp
+    order_method_name
 
 FROM raw_order_methods
