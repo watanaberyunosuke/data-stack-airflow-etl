@@ -1,12 +1,7 @@
-"""
-    Generate mock sales data
-"""
-
 import csv
-from datetime import datetime
 import os
+import uuid
 from random import choice, randrange
-import time
 from faker import Faker
 import psycopg2
 from psycopg2.extras import execute_values
@@ -22,7 +17,6 @@ from assets import (
     PRODUCTS,
     RESELLERS_TRANSACTIONS,
     XML_RESELLERS,
-    generate_purchase_method,
     random_date,
 )
 
@@ -45,7 +39,6 @@ fake = Faker()
 
 
 def set_up_oltp_schema():
-
     print("Setting Up OLTP Schema...")
 
     with CONNECTION as conn:
@@ -61,6 +54,13 @@ def set_up_oltp_schema():
             cursor.execute("CREATE SCHEMA source")
             cursor.execute("CREATE SCHEMA raw")
             cursor.execute("CREATE SCHEMA staging")
+
+
+def generate_customer_id():
+    """
+    Generate a unique customer ID using UUID.
+    """
+    return str(uuid.uuid4())
 
 
 def generate_oltp_data(n=100000):
@@ -79,7 +79,7 @@ def generate_oltp_data(n=100000):
 
         transaction_info = {
             "transaction_id": randrange(1, 100000),
-            "customer_id": randrange(1, 1000),
+            "customer_id": generate_customer_id(),
             "product_id": product["product_id"],
             "amount": product["price"] * quantity,
             "quantity": quantity,
@@ -117,7 +117,7 @@ def publish_oltp_transactions(n=100000):
         cur = conn.cursor()
         cur.execute("DROP TABLE IF EXISTS transactions")
         cur.execute(
-            "CREATE TABLE transactions(transaction_id serial primary key, customer_id int, product_id int, amount numeric(12, 2), quantity int, order_method_id int, transaction_date date, load_timestamp timestamp)"
+            "CREATE TABLE transactions(transaction_id serial primary key, customer_id uuid, product_id int, amount numeric(12, 2), quantity int, order_method_id int, transaction_date date, load_timestamp timestamp)"
         )
 
         query = "INSERT INTO transactions({}) VALUES %s".format(','.join(columns))
@@ -147,12 +147,10 @@ def publish_oltp_order_methods():
     with CONNECTION as conn:
         cur = conn.cursor()
 
-        cur.execute("DROP TABLE IF EXISTS order_method")
-        cur.execute(
-            "CREATE TABLE order_method(order_method_id int, order_method_name varchar(255))"
-        )
+        cur.execute("DROP TABLE IF EXISTS order_methods")
+        cur.execute("CREATE TABLE order_methods(order_method_id int, order_method_name varchar(255))")
 
-        query = "INSERT INTO order_method({}) VALUES %s".format(','.join(columns))
+        query = "INSERT INTO order_methods({}) VALUES %s".format(','.join(columns))
 
         values = [list(transaction.values()) for transaction in ORDER_METHOD]
 
@@ -167,16 +165,12 @@ def publish_oltp_customers():
     customers_list = []
 
     for i in range(1, 1000):
+        customer_id = generate_customer_id()
         first_name = choice(FIRST_NAMES)
         last_name = choice(LAST_NAMES)
-        email = fake.email()
+        email = f"{first_name}.{last_name}@{list(fake.ascii_free_email().split('@'))[1]}"
         customers_list.append(
-            {
-                'customer_id': i,
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': email
-            }
+            {'customer_id': customer_id, 'first_name': first_name, 'last_name': last_name, 'email': email}
         )
 
     columns = customers_list[0].keys()
@@ -186,7 +180,7 @@ def publish_oltp_customers():
 
         cur.execute("DROP TABLE IF EXISTS customers")
         cur.execute(
-            "CREATE TABLE customers(customer_id int, first_name varchar(255), last_name varchar(255), email varchar(255))"
+            "CREATE TABLE customers(customer_id uuid, first_name varchar(255), last_name varchar(255), email varchar(255))"
         )
 
         query = "INSERT INTO customers({}) VALUES %s".format(','.join(columns))
@@ -207,15 +201,30 @@ def publish_oltp_resellers():
         cur = conn.cursor()
 
         cur.execute("DROP TABLE IF EXISTS resellers")
-        cur.execute(
-            "CREATE TABLE resellers(reseller_id int, reseller_name varchar(255), commission_pct decimal)"
-        )
+        cur.execute("CREATE TABLE resellers(reseller_id int, reseller_name varchar(255), commission_pct decimal)")
 
         query = "INSERT INTO resellers({}) VALUES %s".format(','.join(columns))
 
         values = [list(reseller.values()) for reseller in RESELLERS_TRANSACTIONS]
 
         execute_values(cur, query, values)
+
+        conn.commit()
+
+
+# TODO: Refine Resellerscsv table
+def publish_oltp_resellers_csv():
+    print("Publishing OLTP Resellers CSV Table...")
+
+    with CONNECTION as conn:
+        cur = conn.cursor()
+
+        cur.execute("DROP TABLE IF EXISTS resellerscsv")
+        cur.execute(
+            "CREATE TABLE resellerscsv(reseller_id int, transaction_id int, product_name varchar(255), quantity int, total_amount numeric(12, 2), "
+            "order_method varchar(255), customer_id uuid, customer_first_name varchar(255), customer_last_name varchar(255), "
+            "city varchar(255), transaction_date date, load_timestamp timestamp)"
+        )
 
         conn.commit()
 
@@ -267,27 +276,28 @@ def generate_csv_data(n):
     export = []
 
     for i in range(n):
+        reseller_id = choice(RESELLERS_TRANSACTIONS)['reseller_id']
         product = choice(PRODUCTS)
         quantity = randrange(1, 10)
-        order_method = choice(ORDER_METHOD)
+        order_method = choice(ORDER_METHOD)['order_method_id']
         transaction_date = str(random_date())
         if not transaction_date.strip():
-            continue  # Skip if the transaction date is empty
+            continue
         city = choice(CITIES_RANGE)
         first_name = choice(FIRST_NAMES)
         last_name = choice(LAST_NAMES)
-        load_timestamp = time.time()
+        customer_id = generate_customer_id()
+        
 
         transaction = {
+            'reseller_id': reseller_id,
             'product_name': product['product_name'],
             'quantity': quantity,
-            'total_amount': quantity * product['price'],
+            'total_amount': round(quantity * product['price'], 2),
             'order_method': order_method,
-            'customer_first_name': first_name,
-            'customer_last_name': last_name,
+            'customer_id': customer_id,
             'city': city,
             'transaction_date': transaction_date,
-            'load_timestamp': load_timestamp,
         }
 
         export.append(transaction)
@@ -301,7 +311,6 @@ def create_csv_file(n):
 
         export = generate_csv_data(n)
         if not export:
-            # print(f'No data generated for reseller ID: {reseller_id}')
             continue
 
         # Include transaction_id in the keys
@@ -324,14 +333,11 @@ def create_csv_file(n):
                 print(f'Directory created at {directory}')
 
             file_path = f'{directory}/DailySales_{new_format}_{reseller_id}.csv'
-            # print(f'Writing data to {file_path}')
 
             with open(file_path, 'w', newline='') as output_file:
                 dict_writer = csv.DictWriter(output_file, keys)
                 dict_writer.writeheader()
                 dict_writer.writerows(data)
-
-            # print(f'CSV file created successfully for day {day} and reseller ID {reseller_id}')
 
 
 """
@@ -354,24 +360,20 @@ def generate_xml_data(reseller_id, n=5):
         transaction_date_formatted = transaction_date.replace('-', '')
         city = choice(CITIES_RANGE)
 
-        first_name = choice(FIRST_NAMES)
-        last_name = choice(LAST_NAMES)
+        customer_id = generate_customer_id()
 
         transaction = {
             'date': transaction_date_formatted,
-            'reseller-id': reseller_id,
+            'resellerId': reseller_id,
             'productName': product['product_name'],
+            'orderMethod': order_method['order_method_id'],
             'quantity': quantity,
             'totalAmount': quantity * product['price'] * 1.0,
-            'salesChannel': choice(generate_purchase_method('reseller')),
             'customer': {
-                'firstname': first_name,
-                'lastname': last_name,
-                'email': f'{first_name}.{last_name}@example.com',
+                'customer_id': customer_id
             },
             'createDate': transaction_date_formatted,
-            'city': product['city'],
-            'loadTimestamp': time.time(),
+            'city': city,
         }
 
         export.append(transaction)
@@ -385,16 +387,15 @@ def create_xml_file():
         'transaction',
         [
             xml.string('.', attribute='date'),
-            xml.integer('.', attribute='reseller-id'),
+            xml.integer('.', attribute='resellerId'),
             xml.integer('transactionId'),
             xml.string('productName'),
+            xml.integer('orderMethod'),
             xml.integer('quantity'),
             xml.floating_point('totalAmount'),
-            xml.string('salesChannel'),
-            xml.dictionary('customer', [xml.string('firstname'), xml.string('lastname'), xml.string('email')]),
+            xml.dictionary('customer', [xml.string('customer_id')]),
             xml.string('createDate'),
             xml.string('city'),
-            xml.string('loadTimestamp'),
         ],
     )
 

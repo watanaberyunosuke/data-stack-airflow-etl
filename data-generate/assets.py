@@ -68,13 +68,6 @@ XML_RESELLERS = [1001, 1002]
 CSV_RESELLERS = [1003, 1004]
 
 
-def generate_purchase_method(channel):
-    if channel == 'direct':
-        return [*2 * ('Walk In',), *2 * ('Official App',), *3 * ('Other App',), *3 * ('Web',)]
-    elif channel == 'reseller':
-        return [*2 * ('Walk In',), *2 * ('Official App',), *3 * ('Other App',), *3 * ('Web',)]
-
-
 def random_date():
     result = start_date_limit + timedelta(seconds=randint(0, int((end_date_limit - start_date_limit).total_seconds())))
     return result
