@@ -28,7 +28,7 @@ CONNECTION = psycopg2.connect(
     host=os.environ["POSTGRES_HOST"],
     port="5432",
     database=os.environ["POSTGRES_OLTP_DATABASE"],
-    options="-c search_path=extracts",
+    options="-c search_path=raw",
 )
 
 fake = Faker()
@@ -44,13 +44,11 @@ def set_up_oltp_schema():
     with CONNECTION as conn:
         with conn.cursor() as cursor:
             # Drop Schema
-            cursor.execute("DROP SCHEMA IF EXISTS extracts CASCADE")
             cursor.execute("DROP SCHEMA IF EXISTS source CASCADE")
             cursor.execute("DROP SCHEMA IF EXISTS raw CASCADE")
             cursor.execute("DROP SCHEMA IF EXISTS staging CASCADE")
 
             # Create Schema
-            cursor.execute("CREATE SCHEMA extracts")
             cursor.execute("CREATE SCHEMA source")
             cursor.execute("CREATE SCHEMA raw")
             cursor.execute("CREATE SCHEMA staging")
@@ -110,7 +108,7 @@ def publish_oltp_transactions(n=100000):
             host=os.environ["POSTGRES_HOST"],
             port="5432",
             database=os.environ["POSTGRES_OLTP_DATABASE"],
-            options="-c search_path=extracts",
+            options="-c search_path=raw",
         )
         conn.autocommit = True
 
