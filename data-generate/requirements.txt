@@ -81,5 +81,5 @@ tqdm==4.66.4
 typing==3.7.4.3
 typing_extensions==4.12.2
 urllib3==2.2.2
-virtualenv==20.26.3
+virtualenv==20.26.6
 zipp==3.19.2
