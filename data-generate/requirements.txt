@@ -1,3 +1,4 @@
+dbt
 dbt-postgres
 declxml
 Faker
@@ -12,3 +13,4 @@ sqlfluff
 toml
 virtualenv
 wheel
+
