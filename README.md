@@ -1,4 +1,4 @@
-# Airflow ETL Pipeline - Juice Shop
+# Airflow ETL Pipeline - Chemist
 
 This is WIP
 
