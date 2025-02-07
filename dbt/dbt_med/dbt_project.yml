@@ -1,26 +1,36 @@
-name: "dbt_juice_dev_source"
-version: "1.0.0"
+name: dbt_med_dev
+version: 1.0.0
 
-profile: "dbt_juice_dev_source"
+profile: dbt_med_dev
 
-analysis-paths: ["analyses"]
-test-paths: ["tests"]
-seed-paths: ["seeds"]
-macro-paths: ["macros"]
-snapshot-paths: ["snapshots"]
+model-paths:
+  - models
+analysis-paths:
+  - analyses
+test-paths:
+  - tests
+seed-paths:
+  - seeds
+macro-paths:
+  - macros
+snapshot-paths:
+  - snapshots
 
 clean-targets:
-  - "target"
-  - "dbt_packages"
+  - target
+  # - dbt_packages
 
 models:
-  dbt_juice:
-    +materialized: view
+  dbt_med_dev:
+    raw:
+      +materialized: table
+    staging:
+      +materialized: table
 
 seeds:
-  dbt_juice:
+  dbt_med_dev:
     +enabled: true
-    +schema: raw
+    # +schema: source
     australian_postcodes_overall:
       +column_types:
         id: varchar
@@ -33,7 +43,7 @@ seeds:
         type: varchar
         status: varchar
         sa3: varchar
-        sa3name: varchar 
+        sa3name: varchar
         sa4: varchar
         sa4name: varchar
         region: varchar
@@ -63,4 +73,4 @@ seeds:
         electorate: varchar
         electoraterating: varchar
         sed_code: varchar
-        sed_name: varchar 
+        sed_name: varchar

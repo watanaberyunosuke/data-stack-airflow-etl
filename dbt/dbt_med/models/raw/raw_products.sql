@@ -1,5 +1,5 @@
 WITH raw_products AS (
-    SELECT * FROM {{ source('extracts', 'products') }}
+    SELECT * FROM {{ source('raw', 'products') }}
 )
 
 SELECT

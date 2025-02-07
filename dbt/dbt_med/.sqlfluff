@@ -1,0 +1,13 @@
+[sqlfluff]
+dialect = ansi
+
+[rules]
+exclude_rules = TMP
+
+[paths]
+sql_path = models/**/*.sql
+exclude = dbt_packages/**/*
+
+[indentation]
+indent_unit = spaces
+indent_width = 4
