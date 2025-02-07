@@ -1,7 +1,7 @@
 version: 2
 sources:
-- name: extracts
-  schema: extracts
+- name: raw
+  schema: raw
   tables:
   - name: customers
     identifier: customers

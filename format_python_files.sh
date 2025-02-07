@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Find all .py files and format them with black
-find . -type f -name "*.py" -exec black {} \;
+BLACK_PATH=$(which black)
+if [ -z "$BLACK_PATH" ]; then
+  echo "Black is not installed or not found in the environment."
+  exit 1
+fi
 
-# Print a message indicating completion
+find . -name "*.py" -exec $BLACK_PATH {} +
 echo "Formatting complete for all Python files."

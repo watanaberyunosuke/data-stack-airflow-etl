@@ -3,6 +3,7 @@ import os
 import uuid
 from random import choice, randrange
 from faker import Faker
+import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
@@ -113,12 +114,12 @@ def publish_oltp_transactions(n=100000):
         conn.autocommit = True
 
         cur = conn.cursor()
-        cur.execute("DROP TABLE IF EXISTS transactions")
+        cur.execute("DROP TABLE IF EXISTS source.transactions")
         cur.execute(
-            "CREATE TABLE transactions(transaction_id serial primary key, customer_id uuid, product_id int, amount numeric(12, 2), quantity int, order_method_id int, transaction_date date, load_timestamp timestamp)"
+            "CREATE TABLE source.transactions(transaction_id serial primary key, customer_id uuid, product_id int, amount numeric(12, 2), quantity int, order_method_id int, transaction_date date, load_timestamp timestamp DEFAULT now())"
         )
 
-        query = "INSERT INTO transactions({}) VALUES %s".format(','.join(columns))
+        query = "INSERT INTO source.transactions({}) VALUES %s".format(",".join(columns))
         values = [list(transaction.values()) for transaction in transactions_list]
 
         execute_values(cur, query, values)
@@ -145,10 +146,12 @@ def publish_oltp_order_methods():
     with CONNECTION as conn:
         cur = conn.cursor()
 
-        cur.execute("DROP TABLE IF EXISTS order_methods")
-        cur.execute("CREATE TABLE order_methods(order_method_id int, order_method_name varchar(255))")
+        cur.execute("DROP TABLE IF EXISTS source.order_methods")
+        cur.execute(
+            "CREATE TABLE source.order_methods(order_method_id int, order_method_name varchar(255))"
+        )
 
-        query = "INSERT INTO order_methods({}) VALUES %s".format(','.join(columns))
+        query = "INSERT INTO source.order_methods({}) VALUES %s".format(",".join(columns))
 
         values = [list(transaction.values()) for transaction in ORDER_METHOD]
 
@@ -166,9 +169,16 @@ def publish_oltp_customers():
         customer_id = generate_customer_id()
         first_name = choice(FIRST_NAMES)
         last_name = choice(LAST_NAMES)
-        email = f"{first_name}.{last_name}@{list(fake.ascii_free_email().split('@'))[1]}"
+        email = (
+            f"{first_name}.{last_name}@{list(fake.ascii_free_email().split('@'))[1]}"
+        )
         customers_list.append(
-            {'customer_id': customer_id, 'first_name': first_name, 'last_name': last_name, 'email': email}
+            {
+                "customer_id": customer_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+            }
         )
 
     columns = customers_list[0].keys()
@@ -176,12 +186,12 @@ def publish_oltp_customers():
     with CONNECTION as conn:
         cur = conn.cursor()
 
-        cur.execute("DROP TABLE IF EXISTS customers")
+        cur.execute("DROP TABLE IF EXISTS source.customers")
         cur.execute(
-            "CREATE TABLE customers(customer_id uuid, first_name varchar(255), last_name varchar(255), email varchar(255))"
+            "CREATE TABLE source.customers(customer_id uuid, first_name varchar(255), last_name varchar(255), email varchar(255))"
         )
 
-        query = "INSERT INTO customers({}) VALUES %s".format(','.join(columns))
+        query = "INSERT INTO source.customers({}) VALUES %s".format(",".join(columns))
 
         values = [list(customer.values()) for customer in customers_list]
 
@@ -198,10 +208,12 @@ def publish_oltp_resellers():
     with CONNECTION as conn:
         cur = conn.cursor()
 
-        cur.execute("DROP TABLE IF EXISTS resellers")
-        cur.execute("CREATE TABLE resellers(reseller_id int, reseller_name varchar(255), commission_pct decimal)")
+        cur.execute("DROP TABLE IF EXISTS source.resellers")
+        cur.execute(
+            "CREATE TABLE source.resellers(reseller_id int, reseller_name varchar(255), commission_pct decimal)"
+        )
 
-        query = "INSERT INTO resellers({}) VALUES %s".format(','.join(columns))
+        query = "INSERT INTO source.resellers({}) VALUES %s".format(",".join(columns))
 
         values = [list(reseller.values()) for reseller in RESELLERS_TRANSACTIONS]
 
@@ -210,21 +222,77 @@ def publish_oltp_resellers():
         conn.commit()
 
 
-# TODO: Refine Resellerscsv table
 def publish_oltp_resellers_csv():
-    print("Publishing OLTP Resellers CSV Table...")
+    file_directory = os.path.join(os.path.dirname(__file__), "file_landing")
+    expected_columns = [
+        "transaction_id",
+        "reseller_id",
+        "product_name",
+        "quantity",
+        "total_amount",
+        "order_method",
+        "customer_id",
+        "city",
+        "transaction_date",
+    ]
 
-    with CONNECTION as conn:
-        cur = conn.cursor()
+    try:
+        with CONNECTION as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS source.resellerscsv (
+                    transaction_id int,
+                    reseller_id int,
+                    product_name varchar(255),
+                    quantity int,
+                    total_amount numeric(12, 2),
+                    order_method varchar(255),
+                    customer_id uuid,
+                    city varchar(255),
+                    transaction_date date,
+                    load_timestamp timestamp DEFAULT now()
+                );
+            """
+            )
+            conn.commit()
 
-        cur.execute("DROP TABLE IF EXISTS resellerscsv")
-        cur.execute(
-            "CREATE TABLE resellerscsv(reseller_id int, transaction_id int, product_name varchar(255), quantity int, total_amount numeric(12, 2), "
-            "order_method varchar(255), customer_id uuid, customer_first_name varchar(255), customer_last_name varchar(255), "
-            "city varchar(255), transaction_date date, load_timestamp timestamp)"
-        )
+            for filename in os.listdir(file_directory):
+                if filename.endswith(".csv"):
+                    filepath = os.path.join(file_directory, filename)
+                    try:
+                        df = pd.read_csv(filepath)
 
-        conn.commit()
+                        # Ensure all columns are present
+                        missing_columns = [col for col in expected_columns if col not in df.columns]
+                        if missing_columns:
+                            print(f"Skipping {filename} due to missing columns: {missing_columns}")
+                            continue
+
+                        # Explicitly convert to native types to avoid psycopg2 errors
+                        for col in ["transaction_id", "reseller_id", "quantity"]:
+                            df[col] = df[col].astype(int)
+                        df["total_amount"] = df["total_amount"].astype(float)
+                        df["transaction_date"] = pd.to_datetime(df["transaction_date"]).dt.date
+
+                        # Convert to list of tuples
+                        records = [tuple(row) for row in df.itertuples(index=False)]
+
+                        query = f"""
+                            INSERT INTO source.resellerscsv ({", ".join(expected_columns)}) 
+                            VALUES %s
+                        """
+                        execute_values(cur, query, records)
+                        conn.commit()
+                        print(f"Loaded data from {filename} successfully.")
+                    except Exception as e:
+                        print(f"Error processing {filename}: {e}")
+
+    except Exception as e:
+        print(f"Database operation failed: {e}")
+    finally:
+        if cur is not None:
+            cur.close()
 
 
 def publish_oltp_products():
@@ -241,12 +309,12 @@ def publish_oltp_products():
         with CONNECTION as conn:
             cur = conn.cursor()
 
-            cur.execute("DROP TABLE IF EXISTS products")
+            cur.execute("DROP TABLE IF EXISTS source.products")
             cur.execute(
-                "CREATE TABLE products(product_id int primary key, product_name varchar(255), city varchar(255), price numeric(12,2))"
+                "CREATE TABLE source.products(product_id int primary key, product_name varchar(255), city varchar(255), price numeric(12,2))"
             )
 
-            query = "INSERT INTO products({}) VALUES %s".format(','.join(columns))
+            query = "INSERT INTO source.products({}) VALUES %s".format(",".join(columns))
             values = [list(product.values()) for product in product_list]
 
             execute_values(cur, query, values)
@@ -269,15 +337,15 @@ def publish_oltp_products():
 
 
 def generate_csv_data(n):
-    print('Generating CSV file data...')
+    print("Generating CSV file data...")
 
     export = []
 
     for i in range(n):
-        reseller_id = choice(RESELLERS_TRANSACTIONS)['reseller_id']
+        reseller_id = choice(RESELLERS_TRANSACTIONS)["reseller_id"]
         product = choice(PRODUCTS)
         quantity = randrange(1, 10)
-        order_method = choice(ORDER_METHOD)['order_method_id']
+        order_method = choice(ORDER_METHOD)["order_method_id"]
         transaction_date = str(random_date())
         if not transaction_date.strip():
             continue
@@ -285,17 +353,16 @@ def generate_csv_data(n):
         first_name = choice(FIRST_NAMES)
         last_name = choice(LAST_NAMES)
         customer_id = generate_customer_id()
-        
 
         transaction = {
-            'reseller_id': reseller_id,
-            'product_name': product['product_name'],
-            'quantity': quantity,
-            'total_amount': round(quantity * product['price'], 2),
-            'order_method': order_method,
-            'customer_id': customer_id,
-            'city': city,
-            'transaction_date': transaction_date,
+            "reseller_id": reseller_id,
+            "product_name": product["product_name"],
+            "quantity": quantity,
+            "total_amount": round(quantity * product["price"], 2),
+            "order_method": order_method,
+            "customer_id": customer_id,
+            "city": city,
+            "transaction_date": transaction_date,
         }
 
         export.append(transaction)
@@ -304,7 +371,7 @@ def generate_csv_data(n):
 
 
 def create_csv_file(n):
-    print('Creating CSV files...')
+    print("Creating CSV files...")
     for reseller_id in CSV_RESELLERS:
 
         export = generate_csv_data(n)
@@ -312,27 +379,27 @@ def create_csv_file(n):
             continue
 
         # Include transaction_id in the keys
-        keys = ['transaction_id'] + list(export[0].keys())
+        keys = ["transaction_id"] + list(export[0].keys())
         transaction_id = 0
 
         for day in ALL_DAYS:
-            data = [tran for tran in export if tran.get('transaction_date') == day]
+            data = [tran for tran in export if tran.get("transaction_date") == day]
 
             for entry in data:
-                entry['transaction_id'] = transaction_id
+                entry["transaction_id"] = transaction_id
                 transaction_id += 1
 
-            date_name_format = day.split('-')
+            date_name_format = day.split("-")
             new_format = date_name_format[0] + date_name_format[2] + date_name_format[1]
 
-            directory = 'data-generate/file_landing'
+            directory = "data-generate/file_landing"
             if not os.path.exists(directory):
                 os.makedirs(directory)
-                print(f'Directory created at {directory}')
+                print(f"Directory created at {directory}")
 
-            file_path = f'{directory}/DailySales_{new_format}_{reseller_id}.csv'
+            file_path = f"{directory}/DailySales_{new_format}_{reseller_id}.csv"
 
-            with open(file_path, 'w', newline='') as output_file:
+            with open(file_path, "w", newline="") as output_file:
                 dict_writer = csv.DictWriter(output_file, keys)
                 dict_writer.writeheader()
                 dict_writer.writerows(data)
@@ -344,7 +411,7 @@ def create_csv_file(n):
 
 
 def generate_xml_data(reseller_id, n=5):
-    print('Generating XML data...')
+    print("Generating XML data...")
     export = []
 
     for i in range(n):
@@ -355,23 +422,21 @@ def generate_xml_data(reseller_id, n=5):
         transaction_date = str(random_date())
         if not transaction_date.strip():
             continue  # Skip if the transaction date is empty
-        transaction_date_formatted = transaction_date.replace('-', '')
+        transaction_date_formatted = transaction_date.replace("-", "")
         city = choice(CITIES_RANGE)
 
         customer_id = generate_customer_id()
 
         transaction = {
-            'date': transaction_date_formatted,
-            'resellerId': reseller_id,
-            'productName': product['product_name'],
-            'orderMethod': order_method['order_method_id'],
-            'quantity': quantity,
-            'totalAmount': quantity * product['price'] * 1.0,
-            'customer': {
-                'customer_id': customer_id
-            },
-            'createDate': transaction_date_formatted,
-            'city': city,
+            "date": transaction_date_formatted,
+            "resellerId": reseller_id,
+            "productName": product["product_name"],
+            "orderMethod": order_method["order_method_id"],
+            "quantity": quantity,
+            "totalAmount": quantity * product["price"] * 1.0,
+            "customer": {"customer_id": customer_id},
+            "createDate": transaction_date_formatted,
+            "city": city,
         }
 
         export.append(transaction)
@@ -379,21 +444,21 @@ def generate_xml_data(reseller_id, n=5):
 
 
 def create_xml_file():
-    print('Create XML file...')
+    print("Create XML file...")
 
     transaction_processor = xml.dictionary(
-        'transaction',
+        "transaction",
         [
-            xml.string('.', attribute='date'),
-            xml.integer('.', attribute='resellerId'),
-            xml.integer('transactionId'),
-            xml.string('productName'),
-            xml.integer('orderMethod'),
-            xml.integer('quantity'),
-            xml.floating_point('totalAmount'),
-            xml.dictionary('customer', [xml.string('customer_id')]),
-            xml.string('createDate'),
-            xml.string('city'),
+            xml.string(".", attribute="date"),
+            xml.integer(".", attribute="resellerId"),
+            xml.integer("transactionId"),
+            xml.string("productName"),
+            xml.integer("orderMethod"),
+            xml.integer("quantity"),
+            xml.floating_point("totalAmount"),
+            xml.dictionary("customer", [xml.string("customer_id")]),
+            xml.string("createDate"),
+            xml.string("city"),
         ],
     )
 
@@ -406,39 +471,45 @@ def create_xml_file():
             continue  # Skip if no data is generated for the reseller
 
         for day in ALL_DAYS:
-            day_formatted = day.replace('-', '')
-            data = [tran for tran in export if tran.get('createDate') == day_formatted]
+            day_formatted = day.replace("-", "")
+            data = [tran for tran in export if tran.get("createDate") == day_formatted]
 
             if not data:
                 continue  # Skip if no data for the day
 
             for entry in data:
-                entry['transactionId'] = transaction_id
+                entry["transactionId"] = transaction_id
                 transaction_id += 1
 
             result = []
 
             result.append('<?xml version="1.0" encoding="utf-8"?>')
-            result.append('<transactions>')
+            result.append("<transactions>")
 
             for transaction in data:
-                xml_str = xml.serialize_to_string(transaction_processor, transaction, indent='  ')
-                splitted = xml_str.split('\n')
+                xml_str = xml.serialize_to_string(
+                    transaction_processor, transaction, indent="  "
+                )
+                splitted = xml_str.split("\n")
                 result += splitted[1:]
 
-            result.append('</transactions>')
+            result.append("</transactions>")
 
-            date_name_format = day.split('-')
-            new_date_name_format = date_name_format[0] + date_name_format[2] + date_name_format[1]
+            date_name_format = day.split("-")
+            new_date_name_format = (
+                date_name_format[0] + date_name_format[2] + date_name_format[1]
+            )
 
-            directory = 'data-generate/file_landing'
-            file_path = f'{directory}/DailySales_{new_date_name_format}_{reseller_id}.xml'
+            directory = "data-generate/file_landing"
+            file_path = (
+                f"{directory}/DailySales_{new_date_name_format}_{reseller_id}.xml"
+            )
 
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
-            with open(file_path, 'w', newline='') as output_file:
-                output_file.write('\n'.join(result))
+            with open(file_path, "w", newline="") as output_file:
+                output_file.write("\n".join(result))
 
 
 def clean_up(directory, ext):

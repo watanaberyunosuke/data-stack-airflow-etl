@@ -1,3 +1,4 @@
+
 WITH customer_main AS (
     SELECT
         customer_id,
@@ -5,7 +6,7 @@ WITH customer_main AS (
         last_name,
         email
     FROM
-        {{ ref('extracts_customers') }}
+        {{ ref('raw_customers') }}
 ),
 
 customers_csv AS (
@@ -14,7 +15,7 @@ customers_csv AS (
         SPLIT_PART(SPLIT_PART(imported_file, '_', 3), '.', 1)::INT AS reseller_id,
         transaction_id
     FROM
-        {{ ref('extracts_resellerscsv') }}
+        {{ ref('raw_resellerscsv') }}
 ),
 
 customers_xml AS (
@@ -60,4 +61,4 @@ SELECT
 ]) }} AS customer_key, 
 c.*
 FROM customers c
-LEFT JOIN extracts.customers ec ON c.customer_id = ec.customer_id
+LEFT JOIN raw.customers ec ON c.customer_id = ec.customer_id

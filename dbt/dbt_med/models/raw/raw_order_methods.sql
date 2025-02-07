@@ -1,5 +1,5 @@
 WITH raw_order_methods AS (
-    SELECT * FROM {{ source('extracts', 'order_methods') }}
+    SELECT * FROM {{ source('raw', 'order_methods') }}
 )
 
 SELECT

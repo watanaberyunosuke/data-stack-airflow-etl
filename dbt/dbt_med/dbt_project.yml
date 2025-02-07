@@ -1,7 +1,7 @@
-name: dbt_juice_dev
+name: dbt_med_dev
 version: 1.0.0
 
-profile: dbt_juice_dev
+profile: dbt_med_dev
 
 model-paths:
   - models
@@ -18,19 +18,19 @@ snapshot-paths:
 
 clean-targets:
   - target
-  - dbt_packages
+  # - dbt_packages
 
 models:
-  dbt_juice_dev:
-    extracts:
+  dbt_med_dev:
+    raw:
       +materialized: table
     staging:
       +materialized: table
 
 seeds:
-  dbt_juice_dev:
+  dbt_med_dev:
     +enabled: true
-    +schema: source
+    # +schema: source
     australian_postcodes_overall:
       +column_types:
         id: varchar

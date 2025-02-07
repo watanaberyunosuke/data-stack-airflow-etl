@@ -2,7 +2,7 @@ WITH staging_order_methods AS (
     SELECT
         order_method_id,
         order_method_name
-    FROM {{ ref('extracts_order_methods') }}
+    FROM {{ ref('raw_order_methods') }}
 )
 
 SELECT

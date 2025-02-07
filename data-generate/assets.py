@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 import itertools
 from random import randint, randrange
+import random
 import time
 
 from faker import Faker
@@ -11,11 +12,15 @@ fake = Faker()
 # Define date ranges for random date generation
 start_date_limit = date(2024, 6, 1)
 current_datetime = date.today()
-end_date_limit = date(current_datetime.year, current_datetime.month, current_datetime.day)
+end_date_limit = date(
+    current_datetime.year, current_datetime.month, current_datetime.day
+)
 time_delta = end_date_limit - start_date_limit
 
 # Generate all days between the start and end dates
-ALL_DAYS = [str(start_date_limit + timedelta(days=i)) for i in range(time_delta.days + 1)]
+ALL_DAYS = [
+    str(start_date_limit + timedelta(days=i)) for i in range(time_delta.days + 1)
+]
 
 # Define city and product ranges
 CITIES_RANGE = [
@@ -34,8 +39,26 @@ CITIES_RANGE = [
     "Wollongong",
     "Cairns",
 ]
+# Sample medication names
+MEDICATIONS = [
+    "Paracetamol",
+    "Ibuprofen",
+    "Metformin",
+    "Amlodipine",
+    "Atorvastatin",
+    "Simvastatin",
+    "Losartan",
+    "Omeprazole",
+    "Lisinopril",
+    "Metoprolol",
+    "Clopidogrel",
+    "Duloxetine",
+    "Ranitidine",
+    "Hydrochlorothiazide",
+    "Gabapentin",
+]
 
-PRODUCT_NAMES = ["Apple Juice", "Orange Juice", "Guava Juice"]
+PRODUCT_NAMES = random.choices(MEDICATIONS, k=10)
 
 # Define order methods
 ORDER_METHOD = [
@@ -54,14 +77,14 @@ LAST_NAMES = [fake.last_name() for _ in range(1000)]
 
 # Define reseller transactions
 RESELLERS_TRANSACTIONS = [
-    {"reseller_id": 1001, "reseller_name": "Get Hydrated", "commission_pct": 0.1},
-    {"reseller_id": 1002, "reseller_name": "What the Fruit", "commission_pct": 0.17},
+    {"reseller_id": 1001, "reseller_name": "Chemist Lake", "commission_pct": 0.1},
+    {"reseller_id": 1002, "reseller_name": "Terry Black", "commission_pct": 0.17},
     {
         "reseller_id": 1003,
-        "reseller_name": "Pure Pulp Resellers",
+        "reseller_name": "MoneyLine",
         "commission_pct": 0.14,
     },
-    {"reseller_id": 1004, "reseller_name": "Citrus Circuit", "commission_pct": 0.16},
+    {"reseller_id": 1004, "reseller_name": "Slade", "commission_pct": 0.16},
 ]
 
 XML_RESELLERS = [1001, 1002]
@@ -69,7 +92,9 @@ CSV_RESELLERS = [1003, 1004]
 
 
 def random_date():
-    result = start_date_limit + timedelta(seconds=randint(0, int((end_date_limit - start_date_limit).total_seconds())))
+    result = start_date_limit + timedelta(
+        seconds=randint(0, int((end_date_limit - start_date_limit).total_seconds()))
+    )
     return result
 
 
