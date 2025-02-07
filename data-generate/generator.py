@@ -119,7 +119,9 @@ def publish_oltp_transactions(n=100000):
             "CREATE TABLE source.transactions(transaction_id serial primary key, customer_id uuid, product_id int, amount numeric(12, 2), quantity int, order_method_id int, transaction_date date, load_timestamp timestamp DEFAULT now())"
         )
 
-        query = "INSERT INTO source.transactions({}) VALUES %s".format(",".join(columns))
+        query = "INSERT INTO source.transactions({}) VALUES %s".format(
+            ",".join(columns)
+        )
         values = [list(transaction.values()) for transaction in transactions_list]
 
         execute_values(cur, query, values)
@@ -151,7 +153,9 @@ def publish_oltp_order_methods():
             "CREATE TABLE source.order_methods(order_method_id int, order_method_name varchar(255))"
         )
 
-        query = "INSERT INTO source.order_methods({}) VALUES %s".format(",".join(columns))
+        query = "INSERT INTO source.order_methods({}) VALUES %s".format(
+            ",".join(columns)
+        )
 
         values = [list(transaction.values()) for transaction in ORDER_METHOD]
 
@@ -264,16 +268,22 @@ def publish_oltp_resellers_csv():
                         df = pd.read_csv(filepath)
 
                         # Ensure all columns are present
-                        missing_columns = [col for col in expected_columns if col not in df.columns]
+                        missing_columns = [
+                            col for col in expected_columns if col not in df.columns
+                        ]
                         if missing_columns:
-                            print(f"Skipping {filename} due to missing columns: {missing_columns}")
+                            print(
+                                f"Skipping {filename} due to missing columns: {missing_columns}"
+                            )
                             continue
 
                         # Explicitly convert to native types to avoid psycopg2 errors
                         for col in ["transaction_id", "reseller_id", "quantity"]:
                             df[col] = df[col].astype(int)
                         df["total_amount"] = df["total_amount"].astype(float)
-                        df["transaction_date"] = pd.to_datetime(df["transaction_date"]).dt.date
+                        df["transaction_date"] = pd.to_datetime(
+                            df["transaction_date"]
+                        ).dt.date
 
                         # Convert to list of tuples
                         records = [tuple(row) for row in df.itertuples(index=False)]
@@ -314,7 +324,9 @@ def publish_oltp_products():
                 "CREATE TABLE source.products(product_id int primary key, product_name varchar(255), city varchar(255), price numeric(12,2))"
             )
 
-            query = "INSERT INTO source.products({}) VALUES %s".format(",".join(columns))
+            query = "INSERT INTO source.products({}) VALUES %s".format(
+                ",".join(columns)
+            )
             values = [list(product.values()) for product in product_list]
 
             execute_values(cur, query, values)
