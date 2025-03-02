@@ -1,5 +1,10 @@
 WITH raw_resellerscsv AS (
-    SELECT * FROM {{ source('raw', 'resellerscsv') }}
+    SELECT *
+    FROM
+        {{ source(
+            'raw',
+            'resellerscsv'
+        ) }}
 )
 
 SELECT
@@ -16,4 +21,5 @@ SELECT
     transaction_date,
     imported_file,
     now() AS load_timestamp
-FROM raw_resellerscsv
+FROM
+    raw_resellerscsv
