@@ -63,7 +63,7 @@ def generate_customer_id():
 
 
 def generate_oltp_data(n=100000):
-    print("Generating mock data OLTP...")
+    print("Generating mock healthcare encounter data...")
 
     transactions_list = []
     order_method_id_list = [i["order_method_id"] for i in ORDER_METHOD]
@@ -94,7 +94,7 @@ def generate_oltp_data(n=100000):
 
 
 def publish_oltp_transactions(n=100000):
-    print("Loading OLTP Transactions Table...")
+    print("Loading OLTP dispensing events table...")
     transactions_list = generate_oltp_data(n)
     if not transactions_list:
         print("No transactions generated.")
@@ -127,7 +127,7 @@ def publish_oltp_transactions(n=100000):
         execute_values(cur, query, values)
 
         conn.commit()
-        print("Transactions table loaded successfully.")
+        print("Dispensing events table loaded successfully.")
 
     except Exception as e:
         print(f"Error: {e}")
@@ -141,7 +141,7 @@ def publish_oltp_transactions(n=100000):
 
 
 def publish_oltp_order_methods():
-    print("Loading OLTP Order Methods Table...")
+    print("Loading OLTP care access channels table...")
 
     columns = ORDER_METHOD[0].keys()
 
@@ -165,7 +165,7 @@ def publish_oltp_order_methods():
 
 
 def publish_oltp_customers():
-    print("Loading OLTP Customers Table...")
+    print("Loading OLTP patients table...")
 
     customers_list = []
 
@@ -205,7 +205,7 @@ def publish_oltp_customers():
 
 
 def publish_oltp_resellers():
-    print("Publishing OLTP Resellers Table...")
+    print("Publishing OLTP healthcare partners table...")
 
     columns = RESELLERS_TRANSACTIONS[0].keys()
 
@@ -306,11 +306,11 @@ def publish_oltp_resellers_csv():
 
 
 def publish_oltp_products():
-    print("Publishing OLTP Products Table...")
+    print("Publishing OLTP medication catalogue table...")
 
     product_list = PRODUCTS
     if not product_list:
-        print("No products to insert.")
+        print("No medication catalogue rows to insert.")
         return
 
     columns = product_list[0].keys()
@@ -349,7 +349,7 @@ def publish_oltp_products():
 
 
 def generate_csv_data(n):
-    print("Generating CSV file data...")
+    print("Generating healthcare CSV feed data...")
 
     export = []
 
@@ -409,7 +409,7 @@ def create_csv_file(n):
                 os.makedirs(directory)
                 print(f"Directory created at {directory}")
 
-            file_path = f"{directory}/DailySales_{new_format}_{reseller_id}.csv"
+            file_path = f"{directory}/DailyDispense_{new_format}_{reseller_id}.csv"
 
             with open(file_path, "w", newline="") as output_file:
                 dict_writer = csv.DictWriter(output_file, keys)
@@ -423,7 +423,7 @@ def create_csv_file(n):
 
 
 def generate_xml_data(reseller_id, n=5):
-    print("Generating XML data...")
+    print("Generating healthcare XML feed data...")
     export = []
 
     for i in range(n):
@@ -456,7 +456,7 @@ def generate_xml_data(reseller_id, n=5):
 
 
 def create_xml_file():
-    print("Create XML file...")
+    print("Creating XML healthcare partner files...")
 
     transaction_processor = xml.dictionary(
         "transaction",
@@ -514,7 +514,7 @@ def create_xml_file():
 
             directory = "data-generate/file_landing"
             file_path = (
-                f"{directory}/DailySales_{new_date_name_format}_{reseller_id}.xml"
+                f"{directory}/DailyDispense_{new_date_name_format}_{reseller_id}.xml"
             )
 
             if not os.path.exists(directory):

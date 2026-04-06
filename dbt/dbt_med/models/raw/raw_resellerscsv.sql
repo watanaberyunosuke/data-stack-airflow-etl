@@ -20,6 +20,6 @@ SELECT
     city,
     transaction_date,
     imported_file,
-    now() AS load_timestamp
+    NOW() AS load_timestamp
 FROM
     raw_resellerscsv

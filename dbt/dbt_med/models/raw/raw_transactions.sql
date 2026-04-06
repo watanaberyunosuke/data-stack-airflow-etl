@@ -10,6 +10,6 @@ SELECT
     order_method_id,
     transaction_date,
     transaction_id,
-    now() AS loaded_timestamp
+    NOW() AS loaded_timestamp
 FROM raw_transactions
 ORDER BY transaction_date

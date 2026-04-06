@@ -58,7 +58,7 @@ SELECT
 {{ dbt_utils.generate_surrogate_key([
     'c.reseller_id',
     'customer_id'
-]) }} AS customer_key, 
-c.*
-FROM customers c
-LEFT JOIN raw.customers ec ON c.customer_id = ec.customer_id
+]) }} AS customer_key,
+    c.*
+FROM customers AS c
+LEFT JOIN raw.customers AS ec ON c.customer_id = ec.customer_id
