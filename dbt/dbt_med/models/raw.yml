@@ -2,7 +2,7 @@ version: 2
 sources:
 - name: raw
   description: Raw healthcare operational data loaded from the mock OLTP source.
-  schema: raw
+  schema: source
   tables:
   - name: customers
     identifier: customers

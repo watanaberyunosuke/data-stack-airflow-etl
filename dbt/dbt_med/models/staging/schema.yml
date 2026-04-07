@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: staging_customers
+    description: Unified patient dimension staging model resolved across internal and partner feeds.
+    columns:
+      - name: customer_key
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+
+  - name: staging_products
+    description: Medication catalogue enriched with therapeutic-area groupings for reporting and ML.
+    columns:
+      - name: product_key
+        tests:
+          - not_null
+          - unique
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+
+  - name: staging_resellers
+    description: Healthcare partner dimension staging model, including the internal platform as reseller_id 0.
+    columns:
+      - name: reseller_key
+        tests:
+          - not_null
+          - unique
+      - name: reseller_id
+        tests:
+          - not_null
+          - unique
+
+  - name: staging_order_method
+    description: Care access channels enriched with a broader access grouping.
+    columns:
+      - name: order_method_key
+        tests:
+          - not_null
+          - unique
+      - name: order_method_id
+        tests:
+          - not_null
+          - unique
+
+  - name: staging_partner_events
+    description: Unified healthcare event spine combining internal dispensing events with CSV and XML partner feeds.
+    columns:
+      - name: event_key
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+      - name: transaction_date
+        tests:
+          - not_null

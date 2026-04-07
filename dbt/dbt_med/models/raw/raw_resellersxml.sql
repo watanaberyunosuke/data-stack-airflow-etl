@@ -1,9 +1,9 @@
-WITH raw_resellerscsv AS (
+WITH raw_resellersxml AS (
     SELECT *
     FROM
         {{ source(
-            'raw',
-            'resellerscsv'
+            'preprocessed',
+            'resellersxmlextracted'
         ) }}
 )
 
@@ -13,7 +13,7 @@ SELECT
     product_name,
     quantity,
     total_amount,
-    order_method AS order_method_name,
+    order_method_id,
     customer_id,
     customer_first_name,
     customer_last_name,
@@ -21,5 +21,4 @@ SELECT
     transaction_date,
     imported_file,
     load_timestamp
-FROM
-    raw_resellerscsv
+FROM raw_resellersxml

@@ -3,13 +3,13 @@ WITH raw_transactions AS (
 )
 
 SELECT
+    transaction_id,
     customer_id,
     product_id,
     amount,
     quantity,
     order_method_id,
     transaction_date,
-    transaction_id,
-    NOW() AS loaded_timestamp
+    load_timestamp
 FROM raw_transactions
 ORDER BY transaction_date

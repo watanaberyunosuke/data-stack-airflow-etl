@@ -57,7 +57,7 @@ MEDICATIONS = [
     "Salbutamol Inhaler",
 ]
 
-PRODUCT_NAMES = random.choices(MEDICATIONS, k=10)
+PRODUCT_NAMES = random.sample(MEDICATIONS, k=10)
 
 # Define patient access channels
 ORDER_METHOD = [

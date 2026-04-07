@@ -26,6 +26,12 @@ models:
       +materialized: table
     staging:
       +materialized: table
+    marts:
+      +materialized: table
+      reporting:
+        +materialized: table
+      ml:
+        +materialized: table
 
 seeds:
   dbt_med_dev:

@@ -4,5 +4,6 @@ WITH raw_resellers AS (
 
 SELECT
     reseller_id,
-    reseller_name
+    reseller_name,
+    commission_pct
 FROM raw_resellers

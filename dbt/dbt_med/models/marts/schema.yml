@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: dim_patients
+    description: Reporting dimension for patient-level analysis.
+    columns:
+      - name: patient_key
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_medications
+    description: Reporting dimension for medication-level analysis.
+    columns:
+      - name: medication_key
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_partners
+    description: Reporting dimension for healthcare partner analysis.
+    columns:
+      - name: partner_key
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_order_methods
+    description: Reporting dimension for access-channel analysis.
+    columns:
+      - name: order_method_key
+        tests:
+          - not_null
+          - unique
+
+  - name: fct_dispensing_events
+    description: Fact table joining all healthcare dispensing events to reporting dimensions.
+    columns:
+      - name: event_key
+        tests:
+          - not_null
+          - unique
+      - name: patient_key
+        tests:
+          - not_null
+      - name: transaction_date
+        tests:
+          - not_null
+
+  - name: rpt_daily_dispense_summary
+    description: Daily reporting mart summarising dispense activity by city, partner, and access channel.
+
+  - name: rpt_medication_city_trends
+    description: Monthly medication demand mart by city and therapeutic area.
+
+  - name: ml_patient_features
+    description: Feature mart for patient-level outreach and adherence-risk modeling.
+    columns:
+      - name: patient_key
+        tests:
+          - not_null
+          - unique
+
+  - name: ml_gnn_edges
+    description: Heterogeneous graph edge list for GNN use cases such as care-coordination risk prediction and partner routing analysis.
+    columns:
+      - name: source_node_type
+        tests:
+          - not_null
+      - name: source_node_id
+        tests:
+          - not_null
+      - name: target_node_type
+        tests:
+          - not_null
+      - name: target_node_id
+        tests:
+          - not_null
