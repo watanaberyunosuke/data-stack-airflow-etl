@@ -1,13 +1,12 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 import itertools
 from random import randint, randrange
 import random
-import time
 
 from faker import Faker
 
 # Faker
-fake = Faker()
+fake = Faker("en_AU")
 
 # Define date ranges for random date generation
 start_date_limit = date(2024, 6, 1)
@@ -22,7 +21,7 @@ ALL_DAYS = [
     str(start_date_limit + timedelta(days=i)) for i in range(time_delta.days + 1)
 ]
 
-# Define city and product ranges
+# Define care network coverage
 CITIES_RANGE = [
     "Canberra",
     "Sydney",
@@ -39,52 +38,64 @@ CITIES_RANGE = [
     "Wollongong",
     "Cairns",
 ]
-# Sample medication names
+# Sample medication and treatment catalogue
 MEDICATIONS = [
-    "Paracetamol",
-    "Ibuprofen",
-    "Metformin",
-    "Amlodipine",
-    "Atorvastatin",
-    "Simvastatin",
-    "Losartan",
-    "Omeprazole",
-    "Lisinopril",
-    "Metoprolol",
-    "Clopidogrel",
-    "Duloxetine",
-    "Ranitidine",
-    "Hydrochlorothiazide",
-    "Gabapentin",
+    "Paracetamol 500mg",
+    "Ibuprofen 200mg",
+    "Metformin XR 500mg",
+    "Amlodipine 5mg",
+    "Atorvastatin 20mg",
+    "Losartan 50mg",
+    "Omeprazole 20mg",
+    "Lisinopril 10mg",
+    "Metoprolol 50mg",
+    "Clopidogrel 75mg",
+    "Duloxetine 60mg",
+    "Gabapentin 300mg",
+    "Amoxicillin 500mg",
+    "Sertraline 50mg",
+    "Salbutamol Inhaler",
 ]
 
-PRODUCT_NAMES = random.choices(MEDICATIONS, k=10)
+PRODUCT_NAMES = random.sample(MEDICATIONS, k=10)
 
-# Define order methods
+# Define patient access channels
 ORDER_METHOD = [
-    {"order_method_id": 1, "order_method_name": "Walk In"},
-    {"order_method_id": 2, "order_method_name": "Official App"},
-    {"order_method_id": 3, "order_method_name": "Other App"},
-    {"order_method_id": 4, "order_method_name": "Web"},
+    {"order_method_id": 1, "order_method_name": "Walk-in Clinic"},
+    {"order_method_id": 2, "order_method_name": "Patient Portal"},
+    {"order_method_id": 3, "order_method_name": "Telehealth Referral"},
+    {"order_method_id": 4, "order_method_name": "Hospital Discharge"},
 ]
 
-# Initialise products list
+# Initialise medication catalogue
 PRODUCTS = []
 
 # Generate random first and last names
 FIRST_NAMES = [fake.first_name() for _ in range(1000)]
 LAST_NAMES = [fake.last_name() for _ in range(1000)]
 
-# Define reseller transactions
+# Define external healthcare partner feeds
 RESELLERS_TRANSACTIONS = [
-    {"reseller_id": 1001, "reseller_name": "Chemist Lake", "commission_pct": 0.1},
-    {"reseller_id": 1002, "reseller_name": "Terry Black", "commission_pct": 0.17},
+    {
+        "reseller_id": 1001,
+        "reseller_name": "Harbour Family Clinic",
+        "commission_pct": 0.1,
+    },
+    {
+        "reseller_id": 1002,
+        "reseller_name": "Northside Telehealth Hub",
+        "commission_pct": 0.17,
+    },
     {
         "reseller_id": 1003,
-        "reseller_name": "MoneyLine",
+        "reseller_name": "Community Care Network",
         "commission_pct": 0.14,
     },
-    {"reseller_id": 1004, "reseller_name": "Slade", "commission_pct": 0.16},
+    {
+        "reseller_id": 1004,
+        "reseller_name": "Regional Day Hospital",
+        "commission_pct": 0.16,
+    },
 ]
 
 XML_RESELLERS = [1001, 1002]
@@ -98,7 +109,7 @@ def random_date():
     return result
 
 
-# Generate product data by combining product names and cities
+# Generate medication availability by city
 product_data = list(itertools.product(PRODUCT_NAMES, CITIES_RANGE))
 
 PRODUCT_ID = 1

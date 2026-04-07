@@ -1,34 +1,36 @@
 {
-    "sqltools.connections": [
-        {
-            "previewLimit": 50,
-            "server": "localhost",
-            "port": 5432,
-            "driver": "PostgreSQL",
-            "database": "sales_oltp",
-            "username": "postgres",
-            "name": "Local-Postgres"
-        }
-    ],
-    "files.watcherExclude": {
-        "**/target": true
-    },
-    "python.analysis.typeCheckingMode": "basic",
-    "dbt.dbtIntegration": "core",
-    "dbt.deferConfigPerProject": {
-        "dbt/dbt_trans": {
-            "deferToProduction": true
-        }
-    },
-    "dbt.enableNewLineagePanel": true,
-    "python.analysis.autoImportCompletions": true,
-    "sqlfluff.dbtInterface.enabled": true,
-    "sqlfluff.executablePath": "/opt/homebrew/Caskroom/miniconda/base/envs/airflow-etl/bin/sqlfluff",
-    "sqlfluff.excludeRules": [
-        "TMP"
-    ],
-    "sqlfluff.env.useDotEnvFile": true,
-    "sqlfluff.linter.run": "onSave",
-    "sqlfluff.workingDirectory": "dbt/dbt_juice",
-    "sqlfluff.config": "",
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "database": "sales_oltp",
+      "username": "postgres",
+      "name": "Local-Postgres"
+    }
+  ],
+  "files.watcherExclude": {
+    "**/target": true
+  },
+  "python.analysis.typeCheckingMode": "basic",
+  "dbt.dbtIntegration": "core",
+  "dbt.deferConfigPerProject": {
+    "dbt/dbt_trans": {
+      "deferToProduction": true
+    }
+  },
+  "dbt.enableNewLineagePanel": true,
+  "python.analysis.autoImportCompletions": true,
+  "sqlfluff.dbtInterface.enabled": true,
+  "sqlfluff.executablePath": "/opt/homebrew/Caskroom/miniconda/base/envs/airflow-etl/bin/sqlfluff",
+  "sqlfluff.excludeRules": ["TMP"],
+  "sqlfluff.env.useDotEnvFile": true,
+  "sqlfluff.linter.run": "onSave",
+  "sqlfluff.workingDirectory": "dbt/dbt_juice",
+  "sqlfluff.config": "",
+  "sonarlint.connectedMode.project": {
+    "connectionId": "watanaberyunosuke",
+    "projectKey": "watanaberyunosuke_data-stack-airflow-etl"
+  }
 }

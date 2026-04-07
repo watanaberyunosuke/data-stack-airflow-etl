@@ -1,22 +1,31 @@
 version: 2
 sources:
 - name: raw
-  schema: raw
+  description: Raw healthcare operational data loaded from the mock OLTP source.
+  schema: source
   tables:
   - name: customers
     identifier: customers
+    description: Patient master records used to link dispense activity across sources.
   - name: products
     identifier: products
+    description: Medication catalogue and unit pricing by city.
   - name: resellers
     identifier: resellers
+    description: External healthcare partners such as clinics, hospitals, and network providers.
   - name: resellerscsv
     identifier: resellerscsv
+    description: Daily CSV dispense feeds supplied by partner organisations.
   - name: transactions
     identifier: transactions
+    description: Core dispensing and fulfilment events from the primary healthcare platform.
   - name: order_methods
     identifier: order_methods
+    description: Patient access channels such as walk-in, portal, telehealth, and discharge.
 - name: preprocessed
+  description: Preprocessed healthcare partner extracts derived before dbt raw staging.
   schema: staging
   tables:
   - name: resellersxmlextracted
     identifier: resellersxmlextracted
+    description: XML-based partner dispense extracts normalized into relational form.

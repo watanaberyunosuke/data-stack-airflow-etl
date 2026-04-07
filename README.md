@@ -1,6 +1,6 @@
-# Airflow ETL Pipeline - Chemist
+# Airflow ETL Pipeline - Healthcare Analytics
 
-This is WIP
+This project is a work-in-progress healthcare data platform that models how a provider network could ingest, standardise, and transform operational data from outpatient pharmacy, telehealth, and partner clinic systems.
 
 ## Progress
 
@@ -10,9 +10,18 @@ This is WIP
 - [ ] Orchestration: Airflow
 - [ ] Container: Docker Compose
 
+## Domain Focus
+
+The current sample domain is Australian community healthcare. The mock operational data represents:
+
+- patient medication dispensing events
+- medication master data by city
+- care access channels such as walk-in, patient portal, and telehealth
+- partner clinic and pharmacy flat-file feeds
+
 ## Seeding Module
 
-The Seeding module is designed to publish a mock OLTP database, simulating business activities. Additionally, it generates flat files to emulate data provided by resellers.
+The seeding module publishes a mock OLTP database that simulates day-to-day healthcare operations. It also generates CSV and XML landing files that emulate daily dispense feeds from external healthcare partners.
 
 ### Getting Started
 
@@ -26,7 +35,7 @@ pip install -r requirements.txt
 
 3. Create a .env file based on the provided example (.env.example).
 
-4. Seed the database and generate flatfiles by running:
+4. Seed the database and generate healthcare source files by running:
 
 ```bash
 python3 data-generate/initialise.py
