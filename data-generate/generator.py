@@ -37,6 +37,9 @@ DB_CONFIG = {
     "port": "5432",
     "database": os.environ["POSTGRES_OLTP_DATABASE"],
 }
+LANDING_SCHEMA = "landing"
+STAGING_SCHEMA = "staging"
+GOLD_SCHEMA = "gold"
 
 
 def get_connection(search_path=None):
@@ -83,17 +86,17 @@ def ensure_file_landing_directory():
 
 
 def set_up_oltp_schema():
-    print("Setting up OLTP schema...")
+    print("Setting up landing, staging, and gold schemas...")
 
     with get_connection() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("DROP SCHEMA IF EXISTS source CASCADE")
-            cursor.execute("DROP SCHEMA IF EXISTS raw CASCADE")
-            cursor.execute("DROP SCHEMA IF EXISTS staging CASCADE")
+            cursor.execute(f"DROP SCHEMA IF EXISTS {LANDING_SCHEMA} CASCADE")
+            cursor.execute(f"DROP SCHEMA IF EXISTS {STAGING_SCHEMA} CASCADE")
+            cursor.execute(f"DROP SCHEMA IF EXISTS {GOLD_SCHEMA} CASCADE")
 
-            cursor.execute("CREATE SCHEMA source")
-            cursor.execute("CREATE SCHEMA raw")
-            cursor.execute("CREATE SCHEMA staging")
+            cursor.execute(f"CREATE SCHEMA {LANDING_SCHEMA}")
+            cursor.execute(f"CREATE SCHEMA {STAGING_SCHEMA}")
+            cursor.execute(f"CREATE SCHEMA {GOLD_SCHEMA}")
 
 
 def generate_oltp_data(patients, n=100000):
@@ -133,12 +136,12 @@ def publish_oltp_transactions(patients, n=100000):
     columns = list(transactions_list[0].keys())
     values = [list(transaction.values()) for transaction in transactions_list]
 
-    with get_connection("raw") as conn:
+    with get_connection(LANDING_SCHEMA) as conn:
         with conn.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS source.transactions")
+            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.transactions")
             cur.execute(
-                """
-                CREATE TABLE source.transactions (
+                f"""
+                CREATE TABLE {LANDING_SCHEMA}.transactions (
                     transaction_id int primary key,
                     customer_id uuid,
                     product_id int,
@@ -151,9 +154,7 @@ def publish_oltp_transactions(patients, n=100000):
                 """
             )
 
-            query = "INSERT INTO source.transactions({}) VALUES %s".format(
-                ",".join(columns)
-            )
+            query = f"INSERT INTO {LANDING_SCHEMA}.transactions({','.join(columns)}) VALUES %s"
             execute_values(cur, query, values)
         conn.commit()
 
@@ -166,21 +167,19 @@ def publish_oltp_order_methods():
     columns = list(ORDER_METHOD[0].keys())
     values = [list(method.values()) for method in ORDER_METHOD]
 
-    with get_connection("raw") as conn:
+    with get_connection(LANDING_SCHEMA) as conn:
         with conn.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS source.order_methods")
+            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.order_methods")
             cur.execute(
-                """
-                CREATE TABLE source.order_methods (
+                f"""
+                CREATE TABLE {LANDING_SCHEMA}.order_methods (
                     order_method_id int,
                     order_method_name varchar(255)
                 )
                 """
             )
 
-            query = "INSERT INTO source.order_methods({}) VALUES %s".format(
-                ",".join(columns)
-            )
+            query = f"INSERT INTO {LANDING_SCHEMA}.order_methods({','.join(columns)}) VALUES %s"
             execute_values(cur, query, values)
         conn.commit()
 
@@ -191,12 +190,12 @@ def publish_oltp_customers(patients):
     columns = list(patients[0].keys())
     values = [list(patient.values()) for patient in patients]
 
-    with get_connection("raw") as conn:
+    with get_connection(LANDING_SCHEMA) as conn:
         with conn.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS source.customers")
+            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.customers")
             cur.execute(
-                """
-                CREATE TABLE source.customers (
+                f"""
+                CREATE TABLE {LANDING_SCHEMA}.customers (
                     customer_id uuid,
                     first_name varchar(255),
                     last_name varchar(255),
@@ -205,9 +204,7 @@ def publish_oltp_customers(patients):
                 """
             )
 
-            query = "INSERT INTO source.customers({}) VALUES %s".format(
-                ",".join(columns)
-            )
+            query = f"INSERT INTO {LANDING_SCHEMA}.customers({','.join(columns)}) VALUES %s"
             execute_values(cur, query, values)
         conn.commit()
 
@@ -218,12 +215,12 @@ def publish_oltp_resellers():
     columns = list(RESELLERS_TRANSACTIONS[0].keys())
     values = [list(reseller.values()) for reseller in RESELLERS_TRANSACTIONS]
 
-    with get_connection("raw") as conn:
+    with get_connection(LANDING_SCHEMA) as conn:
         with conn.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS source.resellers")
+            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.resellers")
             cur.execute(
-                """
-                CREATE TABLE source.resellers (
+                f"""
+                CREATE TABLE {LANDING_SCHEMA}.resellers (
                     reseller_id int,
                     reseller_name varchar(255),
                     commission_pct decimal
@@ -231,15 +228,13 @@ def publish_oltp_resellers():
                 """
             )
 
-            query = "INSERT INTO source.resellers({}) VALUES %s".format(
-                ",".join(columns)
-            )
+            query = f"INSERT INTO {LANDING_SCHEMA}.resellers({','.join(columns)}) VALUES %s"
             execute_values(cur, query, values)
         conn.commit()
 
 
 def publish_oltp_resellers_csv():
-    print("Loading partner CSV feeds into source.resellerscsv...")
+    print("Loading partner CSV feeds into landing.resellerscsv...")
     ensure_file_landing_directory()
 
     expected_columns = [
@@ -257,12 +252,12 @@ def publish_oltp_resellers_csv():
     ]
     insert_columns = expected_columns + ["imported_file"]
 
-    with get_connection("raw") as conn:
+    with get_connection(LANDING_SCHEMA) as conn:
         with conn.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS source.resellerscsv")
+            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.resellerscsv")
             cur.execute(
-                """
-                CREATE TABLE source.resellerscsv (
+                f"""
+                CREATE TABLE {LANDING_SCHEMA}.resellerscsv (
                     transaction_id int,
                     reseller_id int,
                     product_name varchar(255),
@@ -305,7 +300,7 @@ def publish_oltp_resellers_csv():
                         for row in df[insert_columns].itertuples(index=False, name=None)
                     ]
                     query = f"""
-                        INSERT INTO source.resellerscsv ({", ".join(insert_columns)})
+                        INSERT INTO {LANDING_SCHEMA}.resellerscsv ({", ".join(insert_columns)})
                         VALUES %s
                     """
                     execute_values(cur, query, records)
@@ -316,7 +311,7 @@ def publish_oltp_resellers_csv():
 
 
 def publish_preprocessed_resellers_xml():
-    print("Loading preprocessed XML partner extracts...")
+    print("Loading preprocessed XML partner extracts into landing...")
     ensure_file_landing_directory()
 
     records = []
@@ -358,10 +353,10 @@ def publish_preprocessed_resellers_xml():
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS staging.resellersxmlextracted")
+            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.resellersxmlextracted")
             cur.execute(
-                """
-                CREATE TABLE staging.resellersxmlextracted (
+                f"""
+                CREATE TABLE {LANDING_SCHEMA}.resellersxmlextracted (
                     reseller_id int,
                     transaction_id int,
                     product_name varchar(255),
@@ -382,8 +377,8 @@ def publish_preprocessed_resellers_xml():
             if records:
                 execute_values(
                     cur,
-                    """
-                    INSERT INTO staging.resellersxmlextracted (
+                    f"""
+                    INSERT INTO {LANDING_SCHEMA}.resellersxmlextracted (
                         reseller_id,
                         transaction_id,
                         product_name,
@@ -413,12 +408,12 @@ def publish_oltp_products():
     columns = list(PRODUCTS[0].keys())
     values = [list(product.values()) for product in PRODUCTS]
 
-    with get_connection("raw") as conn:
+    with get_connection(LANDING_SCHEMA) as conn:
         with conn.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS source.products")
+            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.products")
             cur.execute(
-                """
-                CREATE TABLE source.products (
+                f"""
+                CREATE TABLE {LANDING_SCHEMA}.products (
                     product_id int primary key,
                     product_name varchar(255),
                     city varchar(255),
@@ -427,9 +422,7 @@ def publish_oltp_products():
                 """
             )
 
-            query = "INSERT INTO source.products({}) VALUES %s".format(
-                ",".join(columns)
-            )
+            query = f"INSERT INTO {LANDING_SCHEMA}.products({','.join(columns)}) VALUES %s"
             execute_values(cur, query, values)
         conn.commit()
 
