@@ -3,10 +3,10 @@ dbt_med_dev:
   outputs:
     dev:
       type: postgres
-      host: localhost
-      user: postgres
-      password: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      user: "{{ env_var('POSTGRES_USER', 'postgres') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'postgres') }}"
       port: 5432
-      dbname: sales_oltp
+      dbname: "{{ env_var('POSTGRES_DWH_DATABASE', 'sales_dwh') }}"
       schema: staging
       threads: 4

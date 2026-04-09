@@ -18,7 +18,7 @@ CONNECTION = psycopg2.connect(
     password=os.environ["POSTGRES_PASSWORD"],
     host=os.environ["POSTGRES_HOST"],
     port="5432",
-    database=os.environ["POSTGRES_OLTP_DATABASE"],
+    database=os.environ.get("POSTGRES_DWH_DATABASE", "sales_dwh"),
 )
 
 

@@ -12,6 +12,7 @@ import psycopg2
 from dotenv import load_dotenv
 from faker import Faker
 from psycopg2.extras import execute_values
+from psycopg2 import sql
 
 from assets import (
     ALL_DAYS,
@@ -30,23 +31,69 @@ load_dotenv()
 fake = Faker("en_AU")
 
 FILE_LANDING_DIR = Path(__file__).resolve().parent / "file_landing"
-DB_CONFIG = {
+SOURCE_DB_CONFIG = {
     "user": os.environ["POSTGRES_USER"],
     "password": os.environ["POSTGRES_PASSWORD"],
     "host": os.environ["POSTGRES_HOST"],
     "port": "5432",
-    "database": os.environ["POSTGRES_OLTP_DATABASE"],
+    "database": os.environ.get("POSTGRES_OLTP_DATABASE", "sales_oltp"),
 }
+WAREHOUSE_DB_CONFIG = {
+    "user": os.environ["POSTGRES_USER"],
+    "password": os.environ["POSTGRES_PASSWORD"],
+    "host": os.environ["POSTGRES_HOST"],
+    "port": "5432",
+    "database": os.environ.get("POSTGRES_DWH_DATABASE", "sales_dwh"),
+}
+ADMIN_DATABASE = os.environ.get("POSTGRES_ADMIN_DATABASE", "postgres")
+SOURCE_SCHEMA = "source"
 LANDING_SCHEMA = "landing"
 STAGING_SCHEMA = "staging"
 GOLD_SCHEMA = "gold"
 
 
-def get_connection(search_path=None):
-    connection_args = dict(DB_CONFIG)
+def get_connection(target, search_path=None, database_override=None):
+    if target == "source":
+        connection_args = dict(SOURCE_DB_CONFIG)
+    elif target == "warehouse":
+        connection_args = dict(WAREHOUSE_DB_CONFIG)
+    else:
+        raise ValueError(f"Unknown connection target: {target}")
+
+    if database_override:
+        connection_args["database"] = database_override
     if search_path:
         connection_args["options"] = f"-c search_path={search_path}"
     return psycopg2.connect(**connection_args)
+
+
+def ensure_database_exists(database_name):
+    conn = get_connection("source", database_override=ADMIN_DATABASE)
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT 1 FROM pg_database WHERE datname = %s",
+                (database_name,),
+            )
+            exists = cursor.fetchone()
+            if not exists:
+                cursor.execute(
+                    sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database_name))
+                )
+    finally:
+        conn.close()
+
+
+def load_table(target, schema_name, table_name, create_table_sql, columns, rows):
+    with get_connection(target, schema_name) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {schema_name}.{table_name}")
+            cur.execute(create_table_sql)
+            if rows:
+                query = f"INSERT INTO {schema_name}.{table_name}({','.join(columns)}) VALUES %s"
+                execute_values(cur, query, rows)
+        conn.commit()
 
 
 def generate_customer_id():
@@ -86,14 +133,21 @@ def ensure_file_landing_directory():
 
 
 def set_up_oltp_schema():
-    print("Setting up landing, staging, and gold schemas...")
+    print("Setting up source system and warehouse databases...")
 
-    with get_connection() as conn:
+    ensure_database_exists(SOURCE_DB_CONFIG["database"])
+    ensure_database_exists(WAREHOUSE_DB_CONFIG["database"])
+
+    with get_connection("source") as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(f"DROP SCHEMA IF EXISTS {SOURCE_SCHEMA} CASCADE")
+            cursor.execute(f"CREATE SCHEMA {SOURCE_SCHEMA}")
+
+    with get_connection("warehouse") as conn:
         with conn.cursor() as cursor:
             cursor.execute(f"DROP SCHEMA IF EXISTS {LANDING_SCHEMA} CASCADE")
             cursor.execute(f"DROP SCHEMA IF EXISTS {STAGING_SCHEMA} CASCADE")
             cursor.execute(f"DROP SCHEMA IF EXISTS {GOLD_SCHEMA} CASCADE")
-
             cursor.execute(f"CREATE SCHEMA {LANDING_SCHEMA}")
             cursor.execute(f"CREATE SCHEMA {STAGING_SCHEMA}")
             cursor.execute(f"CREATE SCHEMA {GOLD_SCHEMA}")
@@ -127,7 +181,7 @@ def generate_oltp_data(patients, n=100000):
 
 
 def publish_oltp_transactions(patients, n=100000):
-    print("Loading OLTP dispensing events table...")
+    print("Publishing source-system dispensing events and landing extract...")
     transactions_list = generate_oltp_data(patients, n)
     if not transactions_list:
         print("No transactions generated.")
@@ -135,102 +189,130 @@ def publish_oltp_transactions(patients, n=100000):
 
     columns = list(transactions_list[0].keys())
     values = [list(transaction.values()) for transaction in transactions_list]
+    create_table_sql = f"""
+        CREATE TABLE {{schema_name}}.transactions (
+            transaction_id int primary key,
+            customer_id uuid,
+            product_id int,
+            amount numeric(12, 2),
+            quantity int,
+            order_method_id int,
+            transaction_date date,
+            load_timestamp timestamp default now()
+        )
+    """
 
-    with get_connection(LANDING_SCHEMA) as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.transactions")
-            cur.execute(
-                f"""
-                CREATE TABLE {LANDING_SCHEMA}.transactions (
-                    transaction_id int primary key,
-                    customer_id uuid,
-                    product_id int,
-                    amount numeric(12, 2),
-                    quantity int,
-                    order_method_id int,
-                    transaction_date date,
-                    load_timestamp timestamp default now()
-                )
-                """
-            )
-
-            query = f"INSERT INTO {LANDING_SCHEMA}.transactions({','.join(columns)}) VALUES %s"
-            execute_values(cur, query, values)
-        conn.commit()
+    load_table(
+        "source",
+        SOURCE_SCHEMA,
+        "transactions",
+        create_table_sql.format(schema_name=SOURCE_SCHEMA),
+        columns,
+        values,
+    )
+    load_table(
+        "warehouse",
+        LANDING_SCHEMA,
+        "transactions",
+        create_table_sql.format(schema_name=LANDING_SCHEMA),
+        columns,
+        values,
+    )
 
     print("Dispensing events table loaded successfully.")
 
 
 def publish_oltp_order_methods():
-    print("Loading OLTP care access channels table...")
+    print("Publishing source-system care access channels and landing extract...")
 
     columns = list(ORDER_METHOD[0].keys())
     values = [list(method.values()) for method in ORDER_METHOD]
+    create_table_sql = f"""
+        CREATE TABLE {{schema_name}}.order_methods (
+            order_method_id int,
+            order_method_name varchar(255)
+        )
+    """
 
-    with get_connection(LANDING_SCHEMA) as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.order_methods")
-            cur.execute(
-                f"""
-                CREATE TABLE {LANDING_SCHEMA}.order_methods (
-                    order_method_id int,
-                    order_method_name varchar(255)
-                )
-                """
-            )
-
-            query = f"INSERT INTO {LANDING_SCHEMA}.order_methods({','.join(columns)}) VALUES %s"
-            execute_values(cur, query, values)
-        conn.commit()
+    load_table(
+        "source",
+        SOURCE_SCHEMA,
+        "order_methods",
+        create_table_sql.format(schema_name=SOURCE_SCHEMA),
+        columns,
+        values,
+    )
+    load_table(
+        "warehouse",
+        LANDING_SCHEMA,
+        "order_methods",
+        create_table_sql.format(schema_name=LANDING_SCHEMA),
+        columns,
+        values,
+    )
 
 
 def publish_oltp_customers(patients):
-    print("Loading OLTP patients table...")
+    print("Publishing source-system patients and landing extract...")
 
     columns = list(patients[0].keys())
     values = [list(patient.values()) for patient in patients]
+    create_table_sql = f"""
+        CREATE TABLE {{schema_name}}.customers (
+            customer_id uuid,
+            first_name varchar(255),
+            last_name varchar(255),
+            email varchar(255)
+        )
+    """
 
-    with get_connection(LANDING_SCHEMA) as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.customers")
-            cur.execute(
-                f"""
-                CREATE TABLE {LANDING_SCHEMA}.customers (
-                    customer_id uuid,
-                    first_name varchar(255),
-                    last_name varchar(255),
-                    email varchar(255)
-                )
-                """
-            )
-
-            query = f"INSERT INTO {LANDING_SCHEMA}.customers({','.join(columns)}) VALUES %s"
-            execute_values(cur, query, values)
-        conn.commit()
+    load_table(
+        "source",
+        SOURCE_SCHEMA,
+        "customers",
+        create_table_sql.format(schema_name=SOURCE_SCHEMA),
+        columns,
+        values,
+    )
+    load_table(
+        "warehouse",
+        LANDING_SCHEMA,
+        "customers",
+        create_table_sql.format(schema_name=LANDING_SCHEMA),
+        columns,
+        values,
+    )
 
 
 def publish_oltp_resellers():
-    print("Publishing OLTP healthcare partners table...")
+    print("Publishing source-system healthcare partners and landing extract...")
 
     columns = list(RESELLERS_TRANSACTIONS[0].keys())
     values = [list(reseller.values()) for reseller in RESELLERS_TRANSACTIONS]
+    create_table_sql = f"""
+        CREATE TABLE {{schema_name}}.resellers (
+            reseller_id int,
+            reseller_name varchar(255),
+            commission_pct decimal
+        )
+    """
 
-    with get_connection(LANDING_SCHEMA) as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.resellers")
-            cur.execute(
-                f"""
-                CREATE TABLE {LANDING_SCHEMA}.resellers (
-                    reseller_id int,
-                    reseller_name varchar(255),
-                    commission_pct decimal
-                )
-                """
-            )
-
-            query = f"INSERT INTO {LANDING_SCHEMA}.resellers({','.join(columns)}) VALUES %s"
-            execute_values(cur, query, values)
-        conn.commit()
+    load_table(
+        "source",
+        SOURCE_SCHEMA,
+        "resellers",
+        create_table_sql.format(schema_name=SOURCE_SCHEMA),
+        columns,
+        values,
+    )
+    load_table(
+        "warehouse",
+        LANDING_SCHEMA,
+        "resellers",
+        create_table_sql.format(schema_name=LANDING_SCHEMA),
+        columns,
+        values,
+    )
 
 
 def publish_oltp_resellers_csv():
@@ -252,7 +334,7 @@ def publish_oltp_resellers_csv():
     ]
     insert_columns = expected_columns + ["imported_file"]
 
-    with get_connection(LANDING_SCHEMA) as conn:
+    with get_connection("warehouse", LANDING_SCHEMA) as conn:
         with conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.resellerscsv")
             cur.execute(
@@ -351,7 +433,7 @@ def publish_preprocessed_resellers_xml():
                 )
             )
 
-    with get_connection() as conn:
+    with get_connection("warehouse") as conn:
         with conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.resellersxmlextracted")
             cur.execute(
@@ -399,7 +481,7 @@ def publish_preprocessed_resellers_xml():
 
 
 def publish_oltp_products():
-    print("Publishing OLTP medication catalogue table...")
+    print("Publishing source-system medication catalogue and landing extract...")
 
     if not PRODUCTS:
         print("No medication catalogue rows to insert.")
@@ -408,23 +490,31 @@ def publish_oltp_products():
     columns = list(PRODUCTS[0].keys())
     values = [list(product.values()) for product in PRODUCTS]
 
-    with get_connection(LANDING_SCHEMA) as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {LANDING_SCHEMA}.products")
-            cur.execute(
-                f"""
-                CREATE TABLE {LANDING_SCHEMA}.products (
-                    product_id int primary key,
-                    product_name varchar(255),
-                    city varchar(255),
-                    price numeric(12, 2)
-                )
-                """
-            )
+    create_table_sql = f"""
+        CREATE TABLE {{schema_name}}.products (
+            product_id int primary key,
+            product_name varchar(255),
+            city varchar(255),
+            price numeric(12, 2)
+        )
+    """
 
-            query = f"INSERT INTO {LANDING_SCHEMA}.products({','.join(columns)}) VALUES %s"
-            execute_values(cur, query, values)
-        conn.commit()
+    load_table(
+        "source",
+        SOURCE_SCHEMA,
+        "products",
+        create_table_sql.format(schema_name=SOURCE_SCHEMA),
+        columns,
+        values,
+    )
+    load_table(
+        "warehouse",
+        LANDING_SCHEMA,
+        "products",
+        create_table_sql.format(schema_name=LANDING_SCHEMA),
+        columns,
+        values,
+    )
 
     print("Medication catalogue table loaded successfully.")
 
