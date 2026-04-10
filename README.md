@@ -8,14 +8,6 @@ The runtime topology now separates the operational source system from the wareho
 - `sales_dwh` or `POSTGRES_DWH_DATABASE`: warehouse database
 - warehouse schemas: `landing -> staging -> gold`
 
-## Progress
-
-- [x] Seeding module
-- [ ] Spatial Information module: Base Spatial Information DWH
-- [ ] Transform module: DBT
-- [ ] Orchestration: Airflow
-- [ ] Container: Docker Compose
-
 ## Domain Focus
 
 The current sample domain is Australian community healthcare. The mock operational data represents:
@@ -39,7 +31,7 @@ The seeding module publishes a mock OLTP source system in one database and lands
 pip install -r requirements.txt
 ```
 
-3. Create a .env file based on the provided example (.env.example).
+1. Create a .env file based on the provided example (.env.example).
    Required values:
 
 ```bash
@@ -50,13 +42,13 @@ POSTGRES_OLTP_DATABASE=sales_oltp
 POSTGRES_DWH_DATABASE=sales_dwh
 ```
 
-4. Seed the database and generate healthcare source files by running:
+1. Seed the database and generate healthcare source files by running:
 
 ```bash
 python3 data-generate/initialise.py
 ```
 
-5. Build the warehouse models in the warehouse database:
+1. Build the warehouse models in the warehouse database:
 
 ```bash
 dbt build --project-dir dbt/dbt_med --profiles-dir dbt/dbt_med
