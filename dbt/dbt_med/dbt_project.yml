@@ -24,10 +24,13 @@ models:
   dbt_med_dev:
     raw:
       +materialized: table
+      +schema: staging
     staging:
       +materialized: table
+      +schema: staging
     marts:
       +materialized: table
+      +schema: gold
       reporting:
         +materialized: table
       ml:
@@ -36,7 +39,7 @@ models:
 seeds:
   dbt_med_dev:
     +enabled: true
-    # +schema: source
+    +schema: landing
     australian_postcodes_overall:
       +column_types:
         id: varchar

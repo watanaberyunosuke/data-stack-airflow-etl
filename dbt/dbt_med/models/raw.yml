@@ -1,8 +1,8 @@
 version: 2
 sources:
 - name: raw
-  description: Raw healthcare operational data loaded from the mock OLTP source.
-  schema: source
+  description: Landing-zone healthcare operational data loaded from the mock OLTP source.
+  schema: landing
   tables:
   - name: customers
     identifier: customers
@@ -23,8 +23,8 @@ sources:
     identifier: order_methods
     description: Patient access channels such as walk-in, portal, telehealth, and discharge.
 - name: preprocessed
-  description: Preprocessed healthcare partner extracts derived before dbt raw staging.
-  schema: staging
+  description: Landing-zone partner extracts normalized during ingestion before dbt staging.
+  schema: landing
   tables:
   - name: resellersxmlextracted
     identifier: resellersxmlextracted
